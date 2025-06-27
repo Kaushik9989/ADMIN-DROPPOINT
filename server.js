@@ -14,7 +14,7 @@ const Locker = require("./models/locker.js");
 
 const app = express();
 const PORT = 8080;
-const MONGO_URI = "mongodb+srv://vivekkaushik2005:0OShH2EJiRwMSt4m@cluster0.vaqwvzd.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+const MONGO_URI =process.env.MONGO_URI;
 app.engine("ejs", ejsMate);
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
@@ -28,7 +28,7 @@ mongoose
 
 app.use(
   session({
-    secret: "heeeheheah",
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
@@ -82,9 +82,10 @@ app.get("/admin/dashboard", isAdmin, async (req, res) => {
 });
 
 app.get("/admin/add-locker", isAdmin, (req, res) => {
-  res.render("add-locker");
+  res.render("add-locker", {
+    
+  });
 });
-
 app.get("/admin/bookings", isAdmin, async (req, res) => {
   const user = await User.findById(req.session.adminId);
   try {
@@ -142,11 +143,13 @@ app.get("/admin/locker/:lockerId", isAdmin, async (req, res) => {
 app.post("/admin/add-locker", isAdmin, async (req, res) => {
   const { lockerId, address, lat, lng } = req.body;
   const compartments = req.body.compartments || {};
-  console.log("Locker ID:", req.body.lockerId);
-  console.log("Compartments:", req.body.compartments);
-  console.log("Address:", req.body.address);
-  console.log("Lat:", req.body.lat);
-  console.log("Lng:", req.body.lng);
+
+  // ✅ Check if lockerId already exists
+  const existingLocker = await Locker.findOne({ lockerId });
+  if (existingLocker) {
+    req.flash("error", "Locker with this ID already exists.");
+    return res.redirect("/admin/add-locker");
+  }
 
   const compartmentArray = Object.values(compartments).map((c, i) => ({
     compartmentId: c.compartmentId || `C${i + 1}`,
@@ -161,8 +164,6 @@ app.post("/admin/add-locker", isAdmin, async (req, res) => {
     qrCode: null,
   }));
 
-  console.log("Final compartments:", compartmentArray); // ✅ debug
-
   const newLocker = new Locker({
     lockerId,
     location: { lat, lng, address },
@@ -170,8 +171,10 @@ app.post("/admin/add-locker", isAdmin, async (req, res) => {
   });
 
   await newLocker.save();
+  req.flash("success", "Locker added successfully!");
   res.redirect("/admin/dashboard");
 });
+
 
 app.post("/admin/delete-locker", async (req, res) => {
   const { lockerId } = req.body;
