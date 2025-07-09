@@ -60,7 +60,7 @@ app.get("/admin/login",(req,res)=>{
   res.render("adminLogin",{error : null});
 })
 // Admin Login Logic (basic auth)
-app.post("/admin/login", async (req, res) => {
+app.post("/admin/login", async (req, res) => { 
   const { username, password } = req.body;
   const user = await User.findOne({ username, role: "admin" });
   if (!user || !(await user.comparePassword(password))) {
@@ -209,6 +209,187 @@ app.post("/admin/cancel", isAdmin, async (req, res) => {
     res.status(500).send("Error cancelling booking");
   }
 });
+const FunnelEvent = require("./models/funnelEvent.js");
+
+async function trackFunnelStep(req, step, metadata = {}) {
+  try {
+    const ua = uaParser(req.headers['user-agent']);
+    const device = ua.device.type || 'desktop';
+
+    await FunnelEvent.create({
+      sessionId: req.sessionID,
+      userId: req.user?._id || null,
+      phone: req.body?.phone || null,
+      step,
+      metadata: {
+        ...metadata,
+        device
+      }
+    });
+  } catch (err) {
+    console.error("Funnel tracking error:", err);
+  }
+}
+async function getAverageDurations() {
+  const sessions = await FunnelEvent.aggregate([
+    {
+      $match: {
+        step: { $in: [
+          "visit_landing_page",
+          "login_phone",
+          "otp_entered",
+          "dashboard_loaded",
+          "send_parcel_clicked",
+          "send_parcel_submitted",
+          "parcel_created",
+          "parcel_picked"
+        ]}
+      }
+    },
+    {
+      $group: {
+        _id: "$sessionId",
+        steps: {
+          $push: {
+            step: "$step",
+            timestamp: "$timestamp"
+          }
+        }
+      }
+    }
+  ]);
+
+  const durations = {
+    loginToDashboard: [],
+    sendStartToSubmit: [],
+    parcelCreateToPickup: []
+  };
+
+  for (const session of sessions) {
+    const stepMap = {};
+    session.steps.forEach(e => stepMap[e.step] = new Date(e.timestamp));
+
+    // Login → Dashboard
+    if (stepMap["login_phone"] && stepMap["dashboard_loaded"]) {
+      const delta = stepMap["dashboard_loaded"] - stepMap["login_phone"];
+      if (delta >= 0 && delta <= 600000) durations.loginToDashboard.push(delta);
+    }
+
+    // Send Start → Submit
+    if (stepMap["send_parcel_clicked"] && stepMap["send_parcel_submitted"]) {
+      const delta = stepMap["send_parcel_submitted"] - stepMap["send_parcel_clicked"];
+      if (delta >= 0 && delta <= 600000) durations.sendStartToSubmit.push(delta);
+    }
+
+    // Parcel Created → Pickup
+    if (stepMap["parcel_created"] && stepMap["parcel_picked"]) {
+      const delta = stepMap["parcel_picked"] - stepMap["parcel_created"];
+      if (delta >= 0 && delta <= 24 * 60 * 60 * 1000) // < 24h
+        durations.parcelCreateToPickup.push(delta);
+    }
+  }
+
+  // Helper to compute avg
+  const avg = arr =>
+    arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length / 1000).toFixed(2) : "0.00";
+
+  return {
+    avgLoginToDashboard: avg(durations.loginToDashboard),
+    avgSendFlow: avg(durations.sendStartToSubmit),
+    avgPickupTime: avg(durations.parcelCreateToPickup)
+  };
+}
+
+
+
+app.get("/admin/analytics",async(req,res)=>{
+    
+  try {
+    const user = await User.findOne({ role: "admin" });
+    console.log("✅ /admin/funnel route hit");
+
+    const timingData = await getAverageDurations();
+    console.log("✅ Timing data calculated");
+
+    const loginPhoneCount = await FunnelEvent.distinct("sessionId", { step: "login_phone" }).then(d => d.length);
+    const loginOAuthCount = await FunnelEvent.distinct("sessionId", { step: "login_oauth" }).then(d => d.length);
+    const totalVisits = await FunnelEvent.distinct("sessionId", { step: "visit_landing_page" }).then(d => d.length);
+    const loginPhone = await FunnelEvent.distinct("sessionId", { step: "login_phone" }).then(d => d.length);
+    const otpEntered = await FunnelEvent.distinct("sessionId", { step: "otp_entered" }).then(d => d.length);
+    const dashboard = await FunnelEvent.distinct("sessionId", { step: "dashboard_loaded" }).then(d => d.length);
+
+    const drop1 = totalVisits - loginPhone;
+    const drop2 = loginPhone - otpEntered;
+    const drop3 = Math.max(otpEntered - dashboard, 0);
+    const successRate = totalVisits > 0 ? ((dashboard / totalVisits) * 100).toFixed(2) : "0.00";
+    const successRateNum = Math.min(parseFloat(successRate), 100);
+    const abandonmentRate = (100 - successRateNum).toFixed(2);
+
+    const [visitSessions, loginSessions, otpSessions, dashboardSessions] = await Promise.all([
+      FunnelEvent.distinct("sessionId", { step: "visit_landing_page" }),
+      FunnelEvent.distinct("sessionId", { step: { $in: ["login_phone", "login_oauth"] } }),
+      FunnelEvent.distinct("sessionId", { step: "otp_entered" }),
+      FunnelEvent.distinct("sessionId", { step: "dashboard_loaded" })
+    ]);
+
+    const loginCount = loginSessions.length;
+    const otpCount = otpSessions.length;
+    const dashboardCount = dashboardSessions.length;
+
+    const dropAfterVisit = totalVisits - loginCount;
+    const dropAfterLogin = loginCount - otpCount;
+    const dropAfterOTP = Math.max(otpCount - dashboardCount, 0);
+
+    const dashboardSession = await FunnelEvent.distinct("sessionId", { step: "dashboard_loaded" });
+    const sendParcelSessions = await FunnelEvent.distinct("sessionId", { step: "send_parcel_clicked" });
+
+    const sentCount = sendParcelSessions.length;
+    const dashboardOnly = dashboardSession.filter(id => !sendParcelSessions.includes(id));
+    const notSentCount = dashboardOnly.length;
+
+    const stuckStats = {
+      at_visit_page: dropAfterVisit,
+      at_login: dropAfterLogin,
+      at_otp: dropAfterOTP
+    };
+
+    console.log("✅ All data fetched, rendering page");
+
+    res.render("funnelDashboard", {
+      totalVisits,
+      loginCount,
+      otpCount,
+      dashboardCount,
+      successRate,
+      abandonmentRate,
+      stuckStats,
+      timingData,
+      loginPhone,
+      otpEntered,
+      dashboard,
+      drop1,
+      drop2,
+      drop3,
+      loginPhoneCount,
+      sentCount,
+      notSentCount,
+      loginOAuthCount,
+      user
+    });
+
+  } catch (err) {
+    console.error("❌ Error in /admin/funnel:", err);
+    res.status(500).send("Something broke while loading the funnel dashboard.");
+  }
+});
+
+
+
+
+
+
+
+
 
 
 // Admin Logout
