@@ -79,9 +79,9 @@
               class="fas fa-home me-2"></i>Dashboard</a></li>
         <li class="nav-item mb-2"><a class="nav-link text-dark" href="/admin/add-locker"><i
               class="fas fa-plus me-2"></i>Add Locker</a></li>
-               <li class="nav-item mb-2"><a class="nav-link text-dark" href="/admin/analytics"><i
-                 class="fa-solid fa-chart-line me-2"></i>Website Analytics</a></li>
-             
+        <li class="nav-item mb-2"><a class="nav-link text-dark" href="/admin/analytics"><i
+              class="fa-solid fa-chart-line me-2"></i>Website Analytics</a></li>
+
         <li class="nav-item mb-2"><a class="nav-link text-dark" href="/admin/bookings"><i
               class="fas fa-list me-2"></i>All Bookings</a></li>
         <li class="nav-item mt-4"><a class="btn btn-outline-danger w-100" href="/admin/logout"><i
@@ -90,65 +90,74 @@
     </nav>
 
     <!-- Main Content -->
-<div class="flex-grow-1" style="margin-left: 250px;">
-  <div class="container py-5">
-    <div class="card p-4 fade-in">
-      <h3 class="mb-4 text-primary">
-        <i class="fas fa-map-marker-alt me-2"></i>Add New Locker
-      </h3>
+    <div class="flex-grow-1" style="margin-left: 250px;">
+      <div class="container py-5">
+        <div class="card p-4 fade-in">
+          <h3 class="mb-4 text-primary">
+            <i class="fas fa-map-marker-alt me-2"></i>Add New Locker
+          </h3>
 
-      <% if (messages.success && messages.success.length > 0) { %>
-        <div class="alert alert-success"><%= messages.success[0] %></div>
-      <% } %>
+          <% if (messages.success && messages.success.length> 0) { %>
+            <div class="alert alert-success">
+              <%= messages.success[0] %>
+            </div>
+            <% } %>
 
-      <% if (messages.error && messages.error.length > 0) { %>
-        <div class="alert alert-danger"><%= messages.error[0] %></div>
-      <% } %>
+              <% if (messages.error && messages.error.length> 0) { %>
+                <div class="alert alert-danger">
+                  <%= messages.error[0] %>
+                </div>
+                <% } %>
 
-      <form action="/admin/add-locker" method="POST">
-        <div class="row g-3 mb-3">
+                  <form action="/admin/add-locker" method="POST">
+                    <div class="row g-3 mb-3">
 
-          <!-- Locker ID -->
-          <div class="col-md-6">
-            <label for="lockerId" class="form-label">
-              <i class="fas fa-id-badge me-2"></i>Locker ID
-            </label>
-            <input type="text" class="form-control" id="lockerId" name="lockerId" required />
-          </div>
+                      <!-- Locker ID -->
+                      <div class="col-md-6">
+                        <label for="lockerId" class="form-label">
+                          <i class="fas fa-id-badge me-2"></i>Locker ID
+                        </label>
+                        <input type="text" class="form-control" id="lockerId" name="lockerId" required />
+                      </div>
 
-          <!-- Location Search -->
-          <div class="col-md-12">
-            <label for="locationSearch" class="form-label">
-              <i class="fas fa-map-pin me-2"></i>Search Locker Location
-            </label>
-            <input type="text" id="locationSearch" class="form-control" placeholder="Enter a location" required />
-            <ul id="suggestions" class="list-group mt-1 position-absolute w-50"></ul>
-          </div>
+                      <!-- Location Search -->
+                      <div class="col-md-12">
+                        <label for="locationSearch" class="form-label">
+                          <i class="fas fa-map-pin me-2"></i>Search Locker Location
+                        </label>
+                        <input type="text" id="locationSearch" class="form-control" placeholder="Enter a location"
+                          required />
+                        <ul id="suggestions" class="list-group mt-1 position-absolute w-50"></ul>
+                      </div>
+                      <button type="button" id="getLocationBtn" class="btn btn-outline-primary mt-2">
+                        📍 Use My Location
+                      </button>
 
-          <input type="hidden" name="address" id="addressField" />
-          <input type="hidden" name="lat" id="latField" />
-          <input type="hidden" name="lng" id="lngField" />
 
-          <!-- Compartments -->
-          <div class="col-12">
-            <label class="form-label"><i class="fas fa-boxes-stacked me-2"></i>Compartments</label>
-            <div id="compartmentsContainer"></div>
-            <button type="button" class="btn btn-secondary mt-2" onclick="addCompartment()">
-              <i class="fas fa-plus me-1"></i>Add Compartment
-            </button>
-          </div>
+                      <input type="hidden" name="address" id="addressField" />
+                      <input type="hidden" name="lat" id="latField" />
+                      <input type="hidden" name="lng" id="lngField" />
 
+                      <!-- Compartments -->
+                      <div class="col-12">
+                        <label class="form-label"><i class="fas fa-boxes-stacked me-2"></i>Compartments</label>
+                        <div id="compartmentsContainer"></div>
+                        <button type="button" class="btn btn-secondary mt-2" onclick="addCompartment()">
+                          <i class="fas fa-plus me-1"></i>Add Compartment
+                        </button>
+                      </div>
+
+                    </div>
+
+                    <div class="d-grid mt-4">
+                      <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-plus-circle me-2"></i>Add Locker
+                      </button>
+                    </div>
+                  </form>
         </div>
-
-        <div class="d-grid mt-4">
-          <button type="submit" class="btn btn-primary btn-lg">
-            <i class="fas fa-plus-circle me-2"></i>Add Locker
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
-  </div>
-</div>
 
 
     <!-- Scripts -->
@@ -232,6 +241,46 @@
           suggestions.appendChild(li);
         });
       });
+      const getLocationBtn = document.getElementById('getLocationBtn');
+
+getLocationBtn.addEventListener('click', () => {
+  if (!navigator.geolocation) {
+    alert("Geolocation is not supported by your browser.");
+    return;
+  }
+
+  getLocationBtn.innerHTML = '⏳ Getting location...';
+  getLocationBtn.disabled = true;
+
+  navigator.geolocation.getCurrentPosition(async (position) => {
+    const lat = position.coords.latitude;
+    const lon = position.coords.longitude;
+
+    document.getElementById('latField').value = lat;
+    document.getElementById('lngField').value = lon;
+
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+      const data = await res.json();
+      const address = data.display_name || 'Address not found';
+
+      document.getElementById('addressField').value = address;
+      document.getElementById('locationSearch').value = address;
+    } catch (err) {
+      alert("Failed to fetch address.");
+      console.error(err);
+    }
+
+    getLocationBtn.innerHTML = '📍 Use My Location';
+    getLocationBtn.disabled = false;
+
+  }, (err) => {
+    alert("Unable to get your location. Permission denied or device error.");
+    getLocationBtn.innerHTML = '📍 Use My Location';
+    getLocationBtn.disabled = false;
+  });
+});
+
     </script>
 </body>
 
