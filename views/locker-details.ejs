@@ -27,8 +27,7 @@
             <th>Compartment</th>
             <th>Booked</th>
             <th>Locked</th>
-            <th>QR CODE</th>
-            <th>Location</th>
+            
             <th>Size</th>
           </tr>
         </thead>
@@ -50,18 +49,7 @@
                 <%= comp.isLocked ? 'Yes' : 'No' %>
               </span>
             </td>
-            <td>
-              <span>
-                <a href="<%= comp.qrCode %>">QR CODE</a>
-              </span>
-            </td>
-            <td>
-              <span title="<%= locker.location.address %>">
-                <%= locker.location.address.length > 40 ?
-                locker.location.address.slice(0, 40) + "..." :
-                locker.location.address %>
-              </span>
-            </td>
+          
             <td><%=comp.size%></td>
           </tr>
           <% }) %>
