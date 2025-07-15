@@ -137,69 +137,108 @@
     </nav>
 
     <!-- Main Content -->
-    <div class="flex-grow-1" style="margin-left: 250px;">
-      <div class="container py-5">
+<div class="flex-grow-1" style="margin-left: 250px;">
   <div class="container py-5">
-    
-    <div class="row justify-content-center">
-      <div class="col-md-10">
-        <div class="card fade-in">
-          <div class="card-body p-5">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-              <h2 class="card-title mb-0"><i class="fas fa-list me-2"></i>All Active Bookings</h2>
-              <a href="/admin/dashboard" class="btn btn-outline-primary"><i class="fas fa-arrow-left me-2"></i>Back to Admin Dashboard</a>
-            </div>
-            <% if (bookings.length === 0) { %>
-              <div class="alert alert-info" role="alert">
-                <i class="fas fa-info-circle me-2"></i>No active bookings available.
-              </div>
-            <% } else { %>
-              <div class="table-responsive">
-                <table class="table table-bordered table-hover">
-                  <thead class="table-primary">
-                    <tr>
-                      <th>Locker ID</th>
-                      <th>Compartment ID</th>
-                      <th>Username</th>
-                      <th>OTP</th>
-                      <th>Booking Time</th>
-                      <th>Locked</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <% bookings.forEach(booking => { %>
-                      <tr>
-                        <td><%= booking.lockerId %></td>
-                        <td><%= booking.compartmentId %></td>
-                        <td><%= booking.username %></td>
-                        <td><%= booking.otp %></td>
-                        <td><%= new Date(booking.bookingTime).toLocaleString() %></td>
-                        <td>
-                          <% if (booking.isLocked) { %>
-                            <span class="badge bg-success">Yes</span>
-                          <% } else { %>
-                            <span class="badge bg-danger">No</span>
-                          <% } %>
-                        </td>
-                        <td>
-                          <form method="POST" action="/admin/cancel" class="d-inline" onsubmit="return confirm('Are you sure you want to cancel this booking?')">
-                            <input type="hidden" name="lockerId" value="<%= booking.lockerId %>">
-                            <input type="hidden" name="compartmentId" value="<%= booking.compartmentId %>">
-                            <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-times me-2"></i>Cancel</button>
-                          </form>
-                        </td>
-                      </tr>
-                    <% }) %>
-                  </tbody>
-                </table>
-              </div>
-            <% } %>
+    <div class="col-md-10">
+      <div class="card fade-in">
+        <div class="card-body p-2">
+          <div class="mb-3">
+  <input
+    type="text"
+    id="parcelSearch"
+    class="form-control"
+    placeholder="Search by Locker ID, Compartment ID, Name or Phone"
+    onkeyup="filterParcels()"
+  />
+</div>
+
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="card-title mb-0">
+              <i class="fas fa-list me-2"></i>All Active Parcels
+            </h2>
+            <a href="/admin/dashboard" class="btn btn-outline-primary">
+              <i class="fas fa-arrow-left me-2"></i>Back to Admin Dashboard
+            </a>
           </div>
+
+          <% if (bookings.length === 0) { %>
+            <div class="alert alert-info" role="alert">
+              <i class="fas fa-info-circle me-2"></i>No active parcels found.
+            </div>
+          <% } else { %>
+            <div class="table-responsive">
+              <table class="table table-bordered table-hover">
+                <thead class="table-primary">
+                  <tr>
+                    
+                    <th>Status</th>
+                    <th>Locker</th>
+                    <th>Compartment</th>
+                    <th>Sender</th>
+                    <th>Receiver</th>
+                    <th>Receiver Phone</th>
+                    <th>OTP</th>
+                    <th>Payment</th>
+                    <th>Created</th>
+                    <th>Expires</th>
+                    
+                  </tr>
+                </thead>
+                <tbody>
+                  <% bookings.forEach(booking => { %>
+                    <tr>
+                     
+                      <td><span class="badge bg-info text-dark"><%= booking.status %></span></td>
+                      <td><%= booking.lockerId != null ? booking.lockerId : "NA" %></td>
+
+                      <td><%= booking.compartmentId %></td>
+                      <td><%= booking.senderName %></td>
+                      <td><%= booking.receiverName %></td>
+                      <td><%= booking.receiverPhone %></td>
+                      <td><%= booking.otp %></td>
+                      <td>
+                        <span class="badge <%= booking.paymentStatus === 'completed' ? 'bg-success' : 'bg-warning text-dark' %>">
+                           (<%= booking.paymentStatus %>)
+                        </span>
+                      </td>
+                      <td><%= new Date(booking.createdAt).toLocaleString() %></td>
+                      <td><%= new Date(booking.expiresAt).toLocaleString() %></td>
+                     
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          <% } %>
         </div>
       </div>
     </div>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+</div>
+<script>
+  function filterParcels() {
+    const input = document.getElementById("parcelSearch");
+    const filter = input.value.toLowerCase();
+    const table = document.querySelector(".table tbody");
+    const rows = table.getElementsByTagName("tr");
+
+    for (let row of rows) {
+      const cells = row.getElementsByTagName("td");
+      let match = false;
+
+      for (let i of [1, 2, 3, 4, 5]) { // lockerId, compartmentId, senderName, receiverName, receiverPhone
+        if (cells[i] && cells[i].textContent.toLowerCase().includes(filter)) {
+          match = true;
+          break;
+        }
+      }
+
+      row.style.display = match ? "" : "none";
+    }
+  }
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+
 </body>
 </html>

@@ -11,7 +11,7 @@ require("dotenv").config();
 
 const User = require("./models/User/UserUpdated.js");
 const Locker = require("./models/locker.js");
-
+const Parcel = require("./models/ParcelUpdated.js");
 const app = express();
 const PORT = 8080;
 const MONGO_URI =process.env.MONGO_URI;
@@ -86,36 +86,38 @@ app.get("/admin/add-locker", isAdmin, (req, res) => {
     
   });
 });
+
+
 app.get("/admin/bookings", isAdmin, async (req, res) => {
-  const user = await User.findById(req.session.adminId);
   try {
-    const lockers = await Locker.find({});
-    const bookings = [];
+    const admin = await User.findById(req.session.adminId);
 
-    for (const locker of lockers) {
-      for (const compartment of locker.compartments) {
-        if (compartment.isBooked || compartment.bookingInfo.userId) {
-          const user = await User.findById(
-            compartment.bookingInfo.userId
-          ).select("username");
+    const parcels = await Parcel.find({
+      status: { $in: ["awaiting_drop", "awaiting_pick"] }
+    }).sort({ createdAt: -1 }); // optional: newest first
 
-          bookings.push({
-            lockerId: locker.lockerId,
-            compartmentId: compartment.compartmentId,
-            username: user ? user.username : "Unknown",
-            otp: compartment.bookingInfo.otp,
-            bookingTime: compartment.bookingInfo.bookingTime,
-            isLocked: compartment.isLocked,
-          });
-        }
-      }
-    }
+    const bookings = parcels.map(parcel => ({
+      parcelId: parcel._id,
+      lockerId: parcel.lockerId || "N/A",
+      compartmentId: parcel.compartmentId || "N/A",
+      status: parcel.status,
+      otp: parcel.accessCode,
+      senderName: parcel.senderName || "—",
+      receiverName: parcel.receiverName || "—",
+      receiverPhone: parcel.receiverPhone || "—",
+      createdAt: parcel.createdAt,
+      expiresAt: parcel.expiresAt,
+      paymentOption: parcel.paymentOption,
+      paymentStatus: parcel.paymentStatus,
+    }));
 
-    res.render("admin-bookings", { user, bookings });
+    res.render("admin-bookings", { user: admin, bookings });
   } catch (err) {
-    res.status(500).send("Error fetching bookings");
+    console.error("Error loading parcel bookings:", err);
+    res.status(500).send("Internal server error");
   }
 });
+
 
 app.get("/admin/add-locker", isAdmin, async (req, res) => {
   try {
