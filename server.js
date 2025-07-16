@@ -50,8 +50,9 @@ app.use((req, res, next) => {
 
 function isAdmin(req, res, next) {
   if (req.session.adminId) return next();
-  res.redirect("/admin/login");
+  return res.redirect("/admin/login");
 }
+
 app.get("/",(req,res)=>{
   res.render("adminLogin", {error :null});
 })
@@ -60,15 +61,23 @@ app.get("/admin/login",(req,res)=>{
   res.render("adminLogin",{error : null});
 })
 // Admin Login Logic (basic auth)
-app.post("/admin/login", async (req, res) => { 
+app.post("/admin/login", async (req, res) => {
   const { username, password } = req.body;
+
   const user = await User.findOne({ username, role: "admin" });
-  if (!user || !(await user.comparePassword(password))) {
+  if (!user) {
+    return res.render("adminLogin", { error: "Admin not found" });
+  }
+
+  const isMatch = await user.comparePassword(password);
+  if (!isMatch) {
     return res.render("adminLogin", { error: "Invalid credentials" });
   }
+
   req.session.adminId = user._id;
   res.redirect("/admin/dashboard");
 });
+
 app.get("/admin/dashboard", isAdmin, async (req, res) => {
   try {
     const user = await User.findOne({ role: "admin" });
@@ -85,6 +94,29 @@ app.get("/admin/add-locker", isAdmin, (req, res) => {
   res.render("add-locker", {
     
   });
+});
+
+
+
+const bcrypt = require("bcrypt");
+
+app.get("/create-admin", async (req, res) => {
+  try {
+    const adminExists = await User.findOne({ username: "admin" });
+    if (adminExists) return res.send("Admin already exists");
+
+    const admin = new User({
+      username: "admin",
+      password: "admin123",  // will get hashed
+      role: "admin"
+    });
+
+    await admin.save();  // triggers pre-save hashing
+    res.send("✅ Admin created with hashed password");
+  } catch (err) {
+    console.error("Error creating admin:", err);
+    res.status(500).send("Failed");
+  }
 });
 
 
@@ -301,6 +333,140 @@ async function getAverageDurations() {
     avgPickupTime: avg(durations.parcelCreateToPickup)
   };
 }
+
+
+
+const UserAction = require('./models/userAction.js');
+
+app.post("/analytics/user-action", async (req, res) => {
+  const { step, method, path } = req.body;
+  try{
+  await UserAction.create({
+    step,
+    method,
+    path,
+    sessionId: req.sessionID,
+    userId: req.session?.user?._id || null
+  });
+} catch(err){
+  console.log(err);
+}
+  res.sendStatus(200);
+});
+app.get("/action_funnel", async (req, res) => {
+   const user = await User.findById(req.session.adminId);
+  const now = new Date();
+
+  const todayStart = new Date(now.setHours(0, 0, 0, 0));
+  const todayEnd = new Date(todayStart);
+  todayEnd.setDate(todayEnd.getDate() + 1);
+
+  const yesterdayStart = new Date(todayStart);
+  yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+  const yesterdayEnd = new Date(todayStart);
+
+  const [todayRaw, yesterdayRaw] = await Promise.all([
+    UserAction.aggregate([
+      { $match: { timestamp: { $gte: todayStart, $lt: todayEnd } } },
+      { $group: { _id: "$step", count: { $sum: 1 } } }
+    ]),
+    UserAction.aggregate([
+      { $match: { timestamp: { $gte: yesterdayStart, $lt: yesterdayEnd } } },
+      { $group: { _id: "$step", count: { $sum: 1 } } }
+    ])
+  ]);
+
+  const combineSteps = (raw) => {
+    const result = {
+      not_logged_in: 0,
+      logged_in: 0,
+      dashboard: 0,
+      send_step_2: 0,
+      payment_stage: 0,
+      payment_completed: 0,
+      parcel_booked: 0,
+      abandoned_login: 0
+    };
+
+    let loginPage = 0;
+    let loginTotal = 0;
+
+    raw.forEach(({ _id, count }) => {
+      if (_id === "login_page") {
+        result.not_logged_in += count;
+        loginPage = count;
+      } else if (_id === "login_google" || _id === "login_phone") {
+        result.logged_in += count;
+        loginTotal += count;
+      } else if (result[_id] !== undefined) {
+        result[_id] = count;
+      }
+    });
+
+    result.abandoned_login = Math.max(loginPage - loginTotal, 0);
+    return result;
+  };
+
+  const todayData = combineSteps(todayRaw);
+  const yesterdayData = combineSteps(yesterdayRaw);
+
+  const steps = [
+    "not_logged_in",
+    "logged_in",
+    "abandoned_login",
+    "dashboard",
+    "send_step_2",
+    "payment_stage",
+    "payment_completed",
+    "parcel_booked"
+  ];
+
+  const funnel = steps.map(step => ({
+    step,
+    today: todayData[step] || 0,
+    yesterday: yesterdayData[step] || 0
+  }));
+
+  res.render("funnelAction", { funnel,user });
+});
+
+
+
+app.get("/users", async (req, res) => {
+  const user = await User.findById(req.session.adminId);
+  try {
+    const users = await User.find().sort({ createdAt: -1 }).lean();
+
+    res.render("users", {
+      users,user,
+      activePage: "users"
+    });
+  } catch (err) {
+    console.error("Failed to load users:", err);
+    res.status(500).send("Error loading users");
+  }
+});
+app.post("/admin/users/:id/delete", async (req, res) => {
+  
+
+  try {
+    await User.findByIdAndDelete(req.params.id);
+    res.redirect("/users");
+  } catch (err) {
+    console.error("Delete failed:", err);
+    res.status(500).send("Failed to delete user");
+  }
+});
+
+
+
+
+
+
+
+
+
+
 
 
 
