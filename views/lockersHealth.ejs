@@ -1,0 +1,23 @@
+<!-- views/admin/lockers.ejs -->
+<table>
+  <thead><tr><th>Locker</th><th>Status</th><th>Last Seen</th><th>IP</th><th>Meta</th></tr></thead>
+  <tbody>
+    <% lockers.forEach(l => { %>
+      <tr>
+        <td><%= l.lockerId %> <%= l.name ? '- ' + l.name : '' %></td>
+        <td>
+          <span class="status <%= l.status %>"><%= l.status %></span>
+        </td>
+        <td><%= l.lastSeen ? new Date(l.lastSeen).toLocaleString() : 'never' %></td>
+        <td><%= l.ip || '-' %></td>
+        <td><pre><%= JSON.stringify(l.meta || {}, null, 2) %></pre></td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+
+<style>
+  .status.online { color: green; font-weight: bold; }
+  .status.offline { color: red; font-weight: bold; }
+  .status.unknown { color: gray; }
+</style>

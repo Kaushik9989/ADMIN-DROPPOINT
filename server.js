@@ -5,17 +5,24 @@ const session = require("express-session");
 const path = require("path");
 const MongoStore = require("connect-mongo");
 const bodyParser = require("body-parser");
+const Terminal = require("./models/terminal.js"); 
 const flash = require("connect-flash");
 const ejsMate = require("ejs-mate");
 require("dotenv").config();
-
+const Merchant = require("./models/Merchant.js");
 const User = require("./models/User/UserUpdated.js");
 const Locker = require("./models/locker.js");
 const Parcel = require("./models/ParcelUpdated.js");
 const app = express();
+const cron = require("node-cron");
 const PORT = 8080;
+const { setIo } = require('./lib/broadcaster');
 const MONGO_URI =process.env.MONGO_URI;
 app.engine("ejs", ejsMate);
+const http = require('http');
+const server = http.createServer(app);
+const io = require('socket.io')(server, { cors: { origin: '*' } });
+
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.use(express.urlencoded({ extended: true }));
@@ -23,7 +30,7 @@ app.use(express.static("public"));
 
 mongoose
   .connect(MONGO_URI)
-  .then(() => console.log("✅ MongoDB connected"))
+  .then(() => {console.log("✅ MongoDB connected");startAdminWatchdog();})
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
 app.use(
@@ -96,6 +103,46 @@ app.get("/admin/add-locker", isAdmin, (req, res) => {
   });
 });
 
+app.post('/api/terminal/heartbeat', async (req, res) => {
+  try {
+    const { lockerId, meta } = req.body;
+    if (!lockerId) return res.status(400).json({ error: 'lockerId required' });
+
+    const ip = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const now = new Date();
+
+    const update = {
+      lastSeen: now,
+      status: 'online',
+      ip,
+      meta: meta || {},
+      updatedAt: now
+    };
+
+    const locker = await Locker.findOneAndUpdate(
+      { lockerId },
+      { $set: update, $setOnInsert: { lockerId } },
+      { upsert: true, new: true }
+    );
+
+    return res.json({ ok: true, lockerId: locker.lockerId, status: locker.status, lastSeen: locker.lastSeen });
+  } catch (err) {
+    console.error('heartbeat error', err);
+    return res.status(500).json({ error: 'internal' });
+  }
+});
+
+
+
+
+
+
+
+
+app.get('/admin/lockers', async (req, res) => {
+  const lockers = await Locker.find().sort({ status: 1, lastSeen: 1 }).lean();
+  res.render("lockersHealth", { lockers });
+});
 
 
 const bcrypt = require("bcrypt");
@@ -147,6 +194,33 @@ app.get("/admin/bookings", isAdmin, async (req, res) => {
   } catch (err) {
     console.error("Error loading parcel bookings:", err);
     res.status(500).send("Internal server error");
+  }
+});
+
+app.get("/merchantValidate", isAdmin, async (req, res) => {
+  try {
+    const merchants = await Merchant.find().sort({ createdAt: -1 }).lean();
+    res.render("validateMerchant", { merchants });
+  } catch (err) {
+    console.error("Merchant fetch error:", err);
+    res.status(500).send("Server error fetching merchants.");
+  }
+});
+
+app.post("/merchantValidate/:id", isAdmin, async (req, res) => {
+  try {
+    const merchantId = req.params.id;
+    const merchant = await Merchant.findById(merchantId);
+    if (!merchant) {
+      return res.status(404).send("Merchant not found");
+    }
+    merchant.isValid = true;
+    await merchant.save();
+    console.log(merchantId);
+    res.redirect("/merchantValidate");
+  } catch (err) {
+    console.error("Merchant validation error:", err);
+    res.status(500).send("Error validating merchant.");
   }
 });
 
@@ -552,6 +626,155 @@ app.get("/admin/analytics",async(req,res)=>{
 });
 
 
+//// WATCHDOG
+
+const WATCHDOG_SCHEDULE = '*/9 * * * * *';
+
+const STALE_MS = 30 * 1000;
+
+
+function startAdminWatchdog() {
+  cron.schedule(WATCHDOG_SCHEDULE, async () => {
+    const cutoff = new Date(Date.now() - STALE_MS);
+
+    try {
+      // Mark terminals offline if lastSeen is older than cutoff and currently marked online
+      const res = await Terminal.updateMany(
+        {
+          $and: [
+            { 'status.online': true },
+            { $or: [
+                { lastSeen: { $lt: cutoff } },          // lastSeen exists but is stale
+                { lastSeen: { $exists: false } }        // or lastSeen missing
+              ]
+            }
+          ]
+        },
+        {
+          $set: {
+            'status.online': false,
+            'status.updatedBy': 'admin-watchdog',
+            'status.offlineAt': new Date()
+          }
+        }
+      );
+      const affected = await Terminal.find({ lastSeen: { $lt: cutoff } }).lean();
+affected.forEach(doc => emitTerminalStatusChange({
+  terminalId: doc.terminalId,
+  isOnline: false,
+  lastSeen: doc.lastSeen,
+  status: doc.status
+}));
+
+
+      // Optionally flip any that are actually live back to online (defensive)
+      // For example, devices that updated lastSeen but status.online is false.
+      const liveCutoff = new Date(Date.now() - STALE_MS / 2); // e.g., seen within last 15s
+      const res2 = await Terminal.updateMany(
+        {
+          lastSeen: { $gte: liveCutoff },
+          'status.online': false
+        },
+        {
+          $set: {
+            'status.online': true,
+            'status.updatedBy': 'admin-watchdog'
+          }
+        }
+      );
+      emitTerminalStatusChange({
+  terminalId: res2.terminalId,
+  isOnline: true,
+  lastSeen: res2.lastSeen,
+  status: res2.status
+});
+
+      // Logging (optional)
+      if ((res.nModified && res.nModified > 0) || (res2.nModified && res2.nModified > 0)) {
+        console.log(`[admin-watchdog] flipped offline: ${res.nModified || 0}, reactivated: ${res2.nModified || 0}`);
+      }
+    } catch (err) {
+      console.error('[admin-watchdog] error during updateMany', err);
+    }
+  }, {
+    scheduled: true,
+    timezone: 'UTC' // adjust if you want server-local timezone; timestamps stored in UTC by MongoDB
+  });
+
+  console.log('[admin-watchdog] started — checking every 30s for stale terminals');
+}
+
+
+io.on('connection', socket => {
+  console.log('[socket] client connected', socket.id);
+  socket.on('disconnect', () => console.log('[socket] client disconnected', socket.id));
+});
+
+// admin/admin-watchdog.js
+
+function emitTerminalStatusChange(payload) {
+  // payload: { terminalId, isOnline, lastSeen, status }
+  io.emit('terminal:status', payload);
+}
+
+
+
+
+
+
+// server.js (or wherever your route lives)
+app.get('/terminals', async (req, res) => {
+  try {
+    const docs = await Terminal.find({}).sort({ terminalId: 1 }).lean();
+    const now = Date.now();
+    const thresholdMs = (process.env.HEARTBEAT_THRESHOLD_MS && Number(process.env.HEARTBEAT_THRESHOLD_MS)) || 30 * 1000;
+
+    const withOnline = docs.map(d => {
+      const lastSeenTs = d && d.lastSeen ? new Date(d.lastSeen).getTime() : null;
+      const isOnline = lastSeenTs && (now - lastSeenTs <= thresholdMs);
+      // helper to format IST on server for first-render
+      const fmtIST = (dt) => {
+        if (!dt) return '—';
+        try {
+          return new Date(dt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+        } catch (e) {
+          return new Date(dt).toISOString();
+        }
+      };
+
+      // small health shortcuts for template
+      const health = (d.status && d.status.health) || {};
+      const batteryPercent = health.battery && typeof health.battery.percent === 'number' ? health.battery.percent : null;
+      const cpuLoad = health.cpu && typeof health.cpu.loadPercent === 'number' ? health.cpu.loadPercent : null;
+      const memUsed = health.memory && typeof health.memory.usedBytes === 'number' ? health.memory.usedBytes : null;
+      const memTotal = health.memory && typeof health.memory.totalBytes === 'number' ? health.memory.totalBytes : null;
+      const memStr = (memUsed && memTotal) ? `${Math.round(memUsed/1024/1024)}MB / ${Math.round(memTotal/1024/1024)}MB` : '—';
+      const diskSummary = (health.disk && health.disk.length) ? health.disk.map(dk => `${Math.round((dk.used||0)/1024/1024)}MB`).join(', ') : '—';
+      const wifiSsid = health.wifi && health.wifi.ssid ? health.wifi.ssid : '—';
+      const uptime = typeof health.uptimeSeconds === 'number' ? `${Math.floor(health.uptimeSeconds/3600)}h ${Math.floor((health.uptimeSeconds%3600)/60)}m` : '—';
+
+      return {
+        ...d,
+        isOnline,
+        lastSeenIST: d.lastSeen ? fmtIST(d.lastSeen) : '—',
+        localTimeIST: (d.status && d.status.localTime) ? fmtIST(d.status.localTime) : '—',
+        _healthShort: {
+          batteryPercent,
+          cpuLoad,
+          memStr,
+          diskSummary,
+          wifiSsid,
+          uptime
+        }
+      };
+    });
+
+    res.render('terminals', { terminals: withOnline });
+  } catch (err) {
+    console.error('/terminals render error', err);
+    res.status(500).send('server error');
+  }
+});
 
 
 
@@ -559,6 +782,60 @@ app.get("/admin/analytics",async(req,res)=>{
 
 
 
+
+
+
+
+
+
+
+
+app.get('/terminals/add', (req, res) => {
+  res.render('add-terminal');
+});
+
+
+
+
+app.post('/terminals/add', async (req, res) => {
+  try {
+    const { terminalId } = req.body;
+    if (!terminalId || terminalId.trim() === '') {
+      return res.render('add-terminal', { 
+        message: "Terminal ID is required.",
+        messageType: "error"
+      });
+    }
+
+    // Create new terminal doc
+    await Terminal.create({
+      terminalId: terminalId.trim(),
+      lastSeen: null,
+      status: {
+        online: false,
+        updatedBy: "manual-create"
+      }
+    });
+
+    return res.render('add-terminal', {
+      message: "Terminal added successfully!",
+      messageType: "success"
+    });
+
+  } catch (err) {
+    console.error(err);
+
+    let msg = "Something went wrong.";
+    if (err.code === 11000) {
+      msg = "Terminal ID already exists.";
+    }
+
+    res.render('add-terminal', { 
+      message: msg,
+      messageType: "error"
+    });
+  }
+});
 
 // Admin Logout
 app.get("/admin/logout", (req, res) => {

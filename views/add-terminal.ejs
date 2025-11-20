@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Add Terminal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { 
+      font-family: system-ui, sans-serif; 
+      padding: 30px; 
+      background: #fafafa; 
+    }
+    .card {
+      max-width: 450px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 10px;
+      padding: 25px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.07);
+    }
+    h2 { margin-bottom: 20px; }
+    label { display: block; font-weight: 600; margin-bottom: 6px; }
+    input[type="text"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 15px;
+      margin-bottom: 15px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #4f46e5;
+      color: #fff;
+      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #4338ca;
+    }
+    .msg { margin-top: 15px; font-size: 14px; }
+    .success { color: #16a34a; }
+    .error { color: #dc2626; }
+    a { color: #2563eb; text-decoration: none; font-size: 14px; }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h2>Add New Terminal</h2>
+
+    <% if (typeof message !== 'undefined') { %>
+      <div class="msg <%= messageType %>"><%= message %></div>
+    <% } %>
+
+    <form action="/terminals/add" method="POST">
+      <label for="terminalId">Terminal ID</label>
+      <input 
+        type="text" 
+        id="terminalId" 
+        name="terminalId" 
+        placeholder="e.g., terminal-001"
+        required
+      />
+
+      <button type="submit">Add Terminal</button>
+    </form>
+
+    <p style="margin-top: 20px; text-align:center;">
+      <a href="/terminals">← Back to Terminal List</a>
+    </p>
+  </div>
+</body>
+</html>

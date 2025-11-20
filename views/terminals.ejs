@@ -1,0 +1,175 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Terminals — Live</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="/css/styles.css" rel="stylesheet" />
+  <style>
+    body{font-family:sans-serif;margin:18px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;vertical-align:middle}
+    tr.online{background:#e8fff0}
+    tr.offline{background:#fff6f6;color:#444}
+    .badge{padding:4px 8px;border-radius:4px;font-size:12px;display:inline-block;min-width:64px;text-align:center}
+    .badge.online{background:#16a34a;color:#fff}
+    .badge.offline{background:#ef4444;color:#fff}
+    .muted{color:#666;font-size:12px}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Helvetica Neue", monospace; font-size:12px}
+  </style>
+</head>
+<body>
+  <h1>Live Terminals</h1>
+  <p class="muted">Realtime updates powered by Socket.io — last <strong><%= terminals.length %></strong> loaded</p>
+  <a href="/terminals/add" class="btn">➕ Add New Terminal</a>
+
+  <table id="terminals-table" aria-live="polite">
+    <thead>
+      <tr>
+        <th>Terminal ID</th>
+        <th>Last Seen (IST)</th>
+        <th>Local Time (IST)</th>
+        <th>Status</th>
+        <th>Battery</th>
+        <th>CPU%</th>
+        <th>Memory</th>
+        <th>Disk</th>
+        <th>WiFi</th>
+        <th>Uptime</th>
+        <th>Extra</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% terminals.forEach(t => { %>
+        <tr id="t-<%= t.terminalId %>" class="<%= t.isOnline ? 'online' : 'offline' %>">
+          <td class="tid"><%= t.terminalId %></td>
+          <td class="lastSeen mono"><%= t.lastSeenIST %></td>
+          <td class="localTime mono"><%= t.localTimeIST %></td>
+          <td class="status">
+            <span class="badge <%= t.isOnline ? 'online' : 'offline' %>"><%= t.isOnline ? 'ONLINE' : 'OFFLINE' %></span>
+          </td>
+          <td class="battery"><%= (t._healthShort && t._healthShort.batteryPercent != null) ? (t._healthShort.batteryPercent + '%') : '—' %></td>
+          <td class="cpu"><%= (t._healthShort && t._healthShort.cpuLoad != null) ? (t._healthShort.cpuLoad + '%') : '—' %></td>
+          <td class="memory"><%= t._healthShort ? t._healthShort.memStr : '—' %></td>
+          <td class="disk mono"><%= t._healthShort ? t._healthShort.diskSummary : '—' %></td>
+          <td class="wifi"><%= t._healthShort ? t._healthShort.wifiSsid : '—' %></td>
+          <td class="uptime mono"><%= t._healthShort ? t._healthShort.uptime : '—' %></td>
+          <td class="extra mono"><%= (t.status && t.status.extra) ? JSON.stringify(t.status.extra) : '—' %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const THRESHOLD_MS = <%= (process.env.HEARTBEAT_THRESHOLD_MS && Number(process.env.HEARTBEAT_THRESHOLD_MS)) || 10000 %>;
+    const socket = io();
+
+    // client helper: convert to IST string for live updates
+    function toIST(dateStr) {
+      if (!dateStr) return '—';
+      try {
+        return new Date(dateStr).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+      } catch (e) {
+        return new Date(dateStr).toISOString();
+      }
+    }
+
+    // derive short health display from status.health
+    function healthShort(h) {
+      if (!h) return {
+        battery: '—', cpu: '—', mem: '—', disk: '—', wifi: '—', uptime: '—'
+      };
+
+      const battery = (h.battery && typeof h.battery.percent === 'number') ? (h.battery.percent + '%') : (h.battery && typeof h.battery.percent === 'string' ? h.battery.percent : '—');
+      const cpu = (h.cpu && typeof h.cpu.loadPercent === 'number') ? (h.cpu.loadPercent + '%') : '—';
+      const mem = (h.memory && typeof h.memory.usedBytes === 'number' && typeof h.memory.totalBytes === 'number') ? 
+        `${Math.round(h.memory.usedBytes/1024/1024)}MB / ${Math.round(h.memory.totalBytes/1024/1024)}MB` : '—';
+      const disk = (h.disk && h.disk.length) ? h.disk.map(d => {
+        if (d.used && d.size) return `${Math.round((d.used||0)/1024/1024)}MB/${Math.round((d.size||0)/1024/1024)}MB`;
+        if (d.used) return `${Math.round((d.used||0)/1024/1024)}MB`;
+        return '—';
+      }).join(', ') : '—';
+      const wifi = (h.wifi && h.wifi.ssid) ? h.wifi.ssid : '—';
+      const uptime = (typeof h.uptimeSeconds === 'number') ? `${Math.floor(h.uptimeSeconds/3600)}h ${Math.floor((h.uptimeSeconds%3600)/60)}m` : '—';
+
+      return { battery, cpu, mem, disk, wifi, uptime };
+    }
+
+    // update or insert row when a terminal:status event arrives
+    socket.on('terminal:status', (payload) => {
+      try {
+        // payload expected: { terminalId, isOnline, lastSeen, status }
+        const id = 't-' + payload.terminalId;
+        let tr = document.getElementById(id);
+        const isOnline = !!payload.isOnline || (payload.lastSeen && (Date.now() - new Date(payload.lastSeen).getTime() <= THRESHOLD_MS));
+
+        // prepare fields
+        const lastSeenStr = toIST(payload.lastSeen);
+        const localTimeStr = payload.status && payload.status.localTime ? toIST(payload.status.localTime) : '—';
+        const health = payload.status && payload.status.health ? payload.status.health : null;
+        const hs = healthShort(health);
+        const extra = payload.status && payload.status.extra ? JSON.stringify(payload.status.extra) : '—';
+
+        if (!tr) {
+          tr = document.createElement('tr');
+          tr.id = id;
+          tr.className = isOnline ? 'online' : 'offline';
+          tr.innerHTML = `
+            <td class="tid">${payload.terminalId}</td>
+            <td class="lastSeen mono">${lastSeenStr}</td>
+            <td class="localTime mono">${localTimeStr}</td>
+            <td class="status"><span class="badge ${isOnline ? 'online' : 'offline'}">${isOnline ? 'ONLINE' : 'OFFLINE'}</span></td>
+            <td class="battery">${hs.battery}</td>
+            <td class="cpu">${hs.cpu}</td>
+            <td class="memory">${hs.mem}</td>
+            <td class="disk mono">${hs.disk}</td>
+            <td class="wifi">${hs.wifi}</td>
+            <td class="uptime mono">${hs.uptime}</td>
+            <td class="extra mono">${extra}</td>
+          `;
+          document.querySelector('#terminals-table tbody').appendChild(tr);
+          return;
+        }
+
+        // existing row: update cells
+        tr.className = isOnline ? 'online' : 'offline';
+        const lastSeenCell = tr.querySelector('.lastSeen');
+        const localTimeCell = tr.querySelector('.localTime');
+        const statusCell = tr.querySelector('.status');
+        const batteryCell = tr.querySelector('.battery');
+        const cpuCell = tr.querySelector('.cpu');
+        const memCell = tr.querySelector('.memory');
+        const diskCell = tr.querySelector('.disk');
+        const wifiCell = tr.querySelector('.wifi');
+        const uptimeCell = tr.querySelector('.uptime');
+        const extraCell = tr.querySelector('.extra');
+
+        if (lastSeenCell) lastSeenCell.textContent = lastSeenStr;
+        if (localTimeCell) localTimeCell.textContent = localTimeStr;
+        if (statusCell) statusCell.innerHTML = `<span class="badge ${isOnline ? 'online' : 'offline'}">${isOnline ? 'ONLINE' : 'OFFLINE'}</span>`;
+        if (batteryCell) batteryCell.textContent = hs.battery;
+        if (cpuCell) cpuCell.textContent = hs.cpu;
+        if (memCell) memCell.textContent = hs.mem;
+        if (diskCell) diskCell.textContent = hs.disk;
+        if (wifiCell) wifiCell.textContent = hs.wifi;
+        if (uptimeCell) uptimeCell.textContent = hs.uptime;
+        if (extraCell) extraCell.textContent = extra;
+
+        // quick highlight on change
+        tr.animate(
+          [{ backgroundColor: isOnline ? '#eaffef' : '#fff4f2' }, { backgroundColor: '' }],
+          { duration: 700 }
+        );
+      } catch (err) {
+        console.error('socket update error', err);
+      }
+    });
+
+    // reconnect/debug handlers
+    socket.on('connect', () => console.log('[socket] connected', socket.id));
+    socket.on('disconnect', () => console.warn('[socket] disconnected'));
+    socket.on('connect_error', (err) => console.error('[socket] connect_error', err));
+  </script>
+</body>
+</html>
