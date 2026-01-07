@@ -4,31 +4,26 @@ const CompartmentSchema = new mongoose.Schema({
   compartmentId: String,
   isLocked: { type: Boolean, default: true },
   isBooked: { type: Boolean, default: false },
+  isOverstay : {type : Boolean, default: false},
+  currentParcelId : {type: String, default : null},
   size: {
     type: String,
     enum: ['small', 'medium', 'large'], // ✅ Restricts to valid sizes
     default: "medium" // ✅ Optional: make it required
   },
-   lastSeen: { type: Date, default: null, index: true },
-  status: { type: String, enum: ['online','offline','unknown'], default: 'unknown', index: true },
-    meta: {
-    os: String,
-    uptimeSec: Number,
-    freeDiskMb: Number,
-    batteryPercent: Number,
-    firmwareVersion: String
-  },
   bookingInfo: {
     userId: { type: String, default: null },
     bookingTime: { type: Date, default: null },
     otp: { type: String, default: null },
+
+    // 🔐 DROP OTP (for gig worker)
+    dropOtp: { type: String, default: null }, 
+    pickupOtp : {type : String, default : null},          // 6-digit OTP
+    dropOtpExpiresAt: { type: Date, default: null },    // expiry
+    dropOtpUsed: { type: Boolean, default: false },     // one-time use
+    pickupOtpUsed: { type: Boolean, default: false },   // one-time use
     recieverName :  { type: String, default: null },
     recieverPhone : {type: String, default: null}
-  },
-    utility: {
-    type: String,
-    enum: ['standard', 'cooler', 'freezer', 'temperature-controlled', 'electronics-safe'],
-    default: 'standard'
   },
   courierInfo: {
     courierId: mongoose.Schema.Types.ObjectId,
@@ -43,9 +38,15 @@ const LockerSchema = new mongoose.Schema({
   location: {
     lat: { type: Number },
     lng: { type: Number },
-    address: { type: String }
+    address: { type: String },
+     pincode: {type :String }
   },
-  compartments: [CompartmentSchema]
+  compartments: [CompartmentSchema],
+AnalyticStats: {
+  storeStats: { type: Number, default: 0 },
+  sendStats: { type: Number, default: 0 },
+  receiveStats: { type: Number, default: 0 },
+}
 });
 
 module.exports = mongoose.model('Locker', LockerSchema);

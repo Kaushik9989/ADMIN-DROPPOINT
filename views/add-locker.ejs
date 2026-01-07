@@ -77,11 +77,13 @@
       <ul class="nav flex-column">
         <li class="nav-item mb-2"><a class="nav-link text-dark" href="/admin/dashboard"><i
               class="fas fa-home me-2"></i>Dashboard</a></li>
-        <li class="nav-item mb-2"><a class="nav-link text-dark" href="/admin/add-locker"><i
+        <li class="nav-item mb-2"><a class="nav-link text-dark fw-bold" href="/admin/add-locker"><i
               class="fas fa-plus me-2"></i>Add Locker</a></li>
         <li class="nav-item mb-2"><a class="nav-link text-dark" href="/admin/analytics"><i
               class="fa-solid fa-chart-line me-2"></i>Website Analytics</a></li>
 </li>
+  <li class="nav-item mb-2"><a class="nav-link text-dark" href="/analytics/lockers"><i
+              class="fas fa-plus me-2"></i>Locker Analytics</a></li>
            <li class="nav-item mb-2">
       <a class="nav-link text-dark" href="/Action_funnel"><i class="fa-solid fa-chart-line me-2"></i>Funnel Actions</a>
     </li>
@@ -179,7 +181,7 @@
         div.innerHTML = `
         <div class="col-md-5">
           <label class="form-label">Compartment ID</label>
-          <input type="text" class="form-control" name="compartments[${compartmentCount}][compartmentId]" value="C${compartmentCount + 1}" required />
+          <input type="text" class="form-control" name="compartments[${compartmentCount}][compartmentId]" value="${compartmentCount}" required />
         </div>
         <div class="col-md-5">
           <label class="form-label">Size</label>

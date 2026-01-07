@@ -172,13 +172,12 @@ app.get("/admin/bookings", isAdmin, async (req, res) => {
     const admin = await User.findById(req.session.adminId);
 
     const parcels = await Parcel.find({
-      status: { $in: ["awaiting_drop", "awaiting_pick"] }
     }).sort({ createdAt: -1 }); // optional: newest first
 
     const bookings = parcels.map(parcel => ({
       parcelId: parcel._id,
       lockerId: parcel.lockerId || "N/A",
-      compartmentId: parcel.compartmentId || "N/A",
+      compartmentId: parseInt(parcel.compartmentId) + 1 || "N/A",
       status: parcel.status,
       otp: parcel.accessCode,
       senderName: parcel.senderName || "—",
@@ -260,7 +259,7 @@ app.post("/admin/add-locker", isAdmin, async (req, res) => {
   }
 
   const compartmentArray = Object.values(compartments).map((c, i) => ({
-    compartmentId: c.compartmentId || `C${i + 1}`,
+    compartmentId: c.compartmentId || `${i}`,
     size: c.size || "medium",
     isBooked: false,
     isLocked: true,
@@ -631,78 +630,152 @@ app.get("/admin/analytics",async(req,res)=>{
 const WATCHDOG_SCHEDULE = '*/9 * * * * *';
 
 const STALE_MS = 30 * 1000;
+const twilio = require("twilio");
+const client1 = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
+
+
+
+// assume Terminal, client1 (twilio), and emitTerminalStatusChange are imported
 
 function startAdminWatchdog() {
   cron.schedule(WATCHDOG_SCHEDULE, async () => {
     const cutoff = new Date(Date.now() - STALE_MS);
 
     try {
-      // Mark terminals offline if lastSeen is older than cutoff and currently marked online
-      const res = await Terminal.updateMany(
-        {
-          $and: [
-            { 'status.online': true },
-            { $or: [
-                { lastSeen: { $lt: cutoff } },          // lastSeen exists but is stale
-                { lastSeen: { $exists: false } }        // or lastSeen missing
-              ]
-            }
-          ]
-        },
-        {
-          $set: {
-            'status.online': false,
-            'status.updatedBy': 'admin-watchdog',
-            'status.offlineAt': new Date()
-          }
+      // filter used both for update and to fetch affected docs
+      const staleFilter = {
+        'status.online': true,
+        $or: [
+          { lastSeen: { $lt: cutoff } },
+          { lastSeen: { $exists: false } }
+        ]
+      };
+
+      // 1) mark stale terminals offline
+      const updateRes = await Terminal.updateMany(staleFilter, {
+        $set: {
+          'status.online': false,
+          'status.updatedBy': 'admin-watchdog',
+          'status.offlineAt': new Date()
         }
-      );
-      const affected = await Terminal.find({ lastSeen: { $lt: cutoff } }).lean();
-affected.forEach(doc => emitTerminalStatusChange({
-  terminalId: doc.terminalId,
-  isOnline: false,
-  lastSeen: doc.lastSeen,
-  status: doc.status
-}));
+      });
 
+      // 2) fetch the affected docs (we need them to emit + notify)
+      const affected = await Terminal.find(staleFilter).lean();
 
-      // Optionally flip any that are actually live back to online (defensive)
-      // For example, devices that updated lastSeen but status.online is false.
-      const liveCutoff = new Date(Date.now() - STALE_MS / 2); // e.g., seen within last 15s
-      const res2 = await Terminal.updateMany(
-        {
-          lastSeen: { $gte: liveCutoff },
-          'status.online': false
-        },
-        {
+      // emit status change (offline) for each affected terminal
+      for (const doc of affected) {
+        try {
+          await emitTerminalStatusChange({
+            terminalId: doc.terminalId,
+            isOnline: false,
+            lastSeen: doc.lastSeen,
+            status: doc.status
+          });
+        } catch (err) {
+          console.error('[admin-watchdog] emit (offline) error for', doc.terminalId, err);
+        }
+      }
+
+      // 3) send WhatsApp notifications for affected terminals that haven't been notified
+      // Prefer storing notified under status.notified (boolean)
+      for (const doc of affected) {
+        try {
+         
+
+          await client1.messages.create({
+            to: "whatsapp:+916281672715", // replace with real recipient logic
+            from: "whatsapp:+15558076515",
+            contentSid: "HX32104215669b7ff8c36acf31444ee9b2",
+            contentVariables: JSON.stringify({
+              1: doc.terminalId,
+              2: "Offline",
+              3: doc.lastSeen  ? new Date(new Date(doc.lastSeen).getTime() + 5.5 * 60 * 60 * 1000).toISOString().replace('Z', '+05:30') : "N/A"
+            }),
+          });
+
+          console.log('[admin-watchdog] WhatsApp sent for', doc.terminalId);
+
+          // persist notified flag under status.notified so next run skips it
+          await Terminal.updateOne(
+            { _id: doc._id },
+            { $set: { 'status.notified': true, 'status.notifiedAt': new Date() } }
+          ).catch(err => {
+            console.error('[admin-watchdog] failed to persist notified flag for', doc.terminalId, err);
+          });
+
+        } catch (err) {
+          console.error('[admin-watchdog] WhatsApp error for', doc.terminalId, err);
+          // optional: record notify failure timestamp or increment a counter
+          await Terminal.updateOne(
+            { _id: doc._id },
+            { $set: { 'status.notifyErrorAt': new Date() } }
+          ).catch(() => {});
+        }
+      }
+
+      // 4) Defensive: flip terminals back online if they've reported recently
+      const liveCutoff = new Date(Date.now() - STALE_MS / 2);
+      const reactivateFilter = {
+        lastSeen: { $gte: liveCutoff },
+        'status.online': false
+      };
+
+      // fetch docs to reactivate so we can emit events for them
+      const toReactivate = await Terminal.find(reactivateFilter).lean();
+
+      if (toReactivate.length) {
+        const reactRes = await Terminal.updateMany(reactivateFilter, {
           $set: {
             'status.online': true,
-            'status.updatedBy': 'admin-watchdog'
+            'status.updatedBy': 'admin-watchdog',
+            'status.offlineAt': null,
+            'status.notified': false // clear notified so future outages can notify again
+          }
+        });
+
+        // emit status change for each reactivated terminal
+        for (const doc of toReactivate) {
+           await client1.messages.create({
+            to: "whatsapp:+916281672715", // replace with real recipient logic
+            from: "whatsapp:+15558076515",
+            contentSid: "HXa98f3ff30c1e477467503e9ef4ea5e86",
+            contentVariables: JSON.stringify({
+              1: doc.terminalId,
+              2: doc.lastSeen  ? new Date(new Date(doc.lastSeen).getTime() + 5.5 * 60 * 60 * 1000).toISOString().replace('Z', '+05:30') : "N/A"
+            }),
+          });
+          try {
+            await emitTerminalStatusChange({
+              terminalId: doc.terminalId,
+              isOnline: true,
+              lastSeen: doc.lastSeen,
+              status: doc.status
+            });
+          } catch (err) {
+            console.error('[admin-watchdog] emit (reactivated) error for', doc.terminalId, err);
           }
         }
-      );
-      emitTerminalStatusChange({
-  terminalId: res2.terminalId,
-  isOnline: true,
-  lastSeen: res2.lastSeen,
-  status: res2.status
-});
 
-      // Logging (optional)
-      if ((res.nModified && res.nModified > 0) || (res2.nModified && res2.nModified > 0)) {
-        console.log(`[admin-watchdog] flipped offline: ${res.nModified || 0}, reactivated: ${res2.nModified || 0}`);
+        console.log('[admin-watchdog] reactivated:', reactRes.modifiedCount || reactRes.nModified || toReactivate.length);
       }
+
+      // 5) Summary logging
+      console.log(`[admin-watchdog] flipped offline: ${updateRes.modifiedCount || updateRes.nModified || 0}, affected fetched: ${affected.length}, reactivated: ${toReactivate ? toReactivate.length : 0}`);
+
     } catch (err) {
-      console.error('[admin-watchdog] error during updateMany', err);
+      console.error('[admin-watchdog] error during run', err);
     }
   }, {
     scheduled: true,
-    timezone: 'UTC' // adjust if you want server-local timezone; timestamps stored in UTC by MongoDB
+    timezone: 'UTC'
   });
 
-  console.log('[admin-watchdog] started — checking every 30s for stale terminals');
+  console.log('[admin-watchdog] started — checking according to schedule');
 }
+
+module.exports = { startAdminWatchdog };
 
 
 io.on('connection', socket => {
@@ -842,6 +915,27 @@ app.get("/admin/logout", (req, res) => {
   req.session.destroy();
   res.redirect("/admin/login");
 });
+
+
+///// analytics for every locker
+
+app.get("/analytics/lockers", async (req, res) => {
+  const lockers = await Locker.find().select("lockerId stats location.address");
+  res.render("admin-locker-analytics", { lockers });
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 app.listen(PORT, () => {
   console.log(`🚀 Admin server running on http://localhost:${PORT}`);
