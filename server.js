@@ -927,6 +927,71 @@ app.get("/analytics/lockers", async (req, res) => {
 
 
 
+//////// API CREATION
+
+const crypto = require("crypto");
+const Partner = require("./models/partnerSchema.js");
+
+function generateApiKey(partnerName) {
+  const random = crypto.randomBytes(24).toString("hex");
+  return `dp_live_${partnerName.toLowerCase()}_${random}`;
+}
+
+
+
+
+app.get("/admin/create-partner", (req, res) => {
+  res.render("admin_create_partner", {
+    apiKey: null,
+    partnerName: null,
+    error: null
+  });
+});
+
+app.post("/admin/create-partner", async (req, res) => {
+  try {
+    const { name } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.render("admin_create_partner", {
+        apiKey: null,
+        partnerName: null,
+        error: "Partner name is required"
+      });
+    }
+    const p1 = await Partner.findOne({name : name});
+    if(p1){
+      return res.render("admin_create_partner",{
+        apiKey : null,
+        partnerName : null,
+        error : "Partner already exists"
+    })
+    }
+    const apiKey = generateApiKey(name);
+
+    const partner = await Partner.create({
+      name,
+      apiKey
+    });
+
+    res.render("admin_create_partner", {
+      apiKey: partner.apiKey,
+      partnerName: partner.name,
+      error: null
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.render("admin_create_partner", {
+      apiKey: null,
+      partnerName: null,
+      error: "Something went wrong"
+    });
+  }
+});
+
+
+
 
 
 
