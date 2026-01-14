@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -95,37 +96,10 @@
 
 <!-- NAVBAR -->
 <!-- NAVBAR -->
-<nav class="navbar navbar-expand-lg navbar-dark top-navbar">
-  <div class="container-fluid">
-    <a class="navbar-brand" href="/admin/dashboard">
-      <i class="fas fa-tools me-2"></i>Admin Panel
-    </a>
-
-    <div class="ms-auto d-flex align-items-center gap-3">
-      <span class="text-white">
-        Welcome, <span class="badge bg-light text-dark">Admin</span>
-      </span>
-      <a class="btn btn-outline-light btn-sm" href="/admin/logout">
-        <i class="fas fa-sign-out-alt me-1"></i>Logout
-      </a>
-    </div>
-  </div>
-</nav>
+<%- include("./imports/adminTopbar") %>
 
 <!-- SIDEBAR -->
-<nav class="sidebar">
-  <ul class="nav flex-column">
-    <li class="nav-item mb-2"><a class="nav-link text-dark" href="/admin/dashboard"><i class="fas fa-home me-2"></i>Dashboard</a></li>
-    <li class="nav-item mb-2"><a class="nav-link text-dark" href="/admin/add-locker"><i class="fas fa-plus me-2"></i>Add Locker</a></li>
-    <li class="nav-item mb-2"><a class="nav-link text-dark" href="/admin/analytics"><i class="fa-solid fa-chart-line me-2"></i>Website Analytics</a></li>
-               <li class="nav-item mb-2"><a class="nav-link text-dark fw" href="/admin/create-partner"><i class="fa-solid fa-code"></i>  Generate API</a></li>
-      <li class="nav-item mb-2"><a class="nav-link text-dark fw-bold" href="/analytics/locker"><i class="fa-solid fa-chart-line me-2"></i>Locker Analytics</a></li>
-    <li class="nav-item mb-2"><a class="nav-link text-dark" href="/Action_funnel"><i class="fa-solid fa-filter me-2"></i>Funnel Actions</a></li>
-    <li class="nav-item mb-2"><a class="nav-link text-dark" href="/users"><i class="fa-solid fa-users me-2"></i>User Management</a></li>
-    <li class="nav-item mb-2"><a class="nav-link text-dark" href="/admin/bookings"><i class="fas fa-list me-2"></i>All Bookings</a></li>
-    <li class="nav-item mt-4"><a class="btn btn-outline-danger w-100" href="/admin/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
-  </ul>
-</nav>
+<%- include("./imports/adminSidebar") %>
 
 <!-- MAIN CONTENT -->
 <div class="main-wrapper">
