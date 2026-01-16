@@ -938,14 +938,29 @@ function generateApiKey(partnerName) {
 }
 
 
+const PartnerRequest = require("./models/partnerRequest");
 
-
-app.get("/admin/create-partner", (req, res) => {
+app.get("/admin/create-partner", async(req, res) => {
+   const requests = await PartnerRequest.find().sort({ createdAt: -1 });
   res.render("admin_create_partner", {
+     requests,
     apiKey: null,
     partnerName: null,
     error: null
   });
+});
+app.post("/admin/partner-requests/:id/approve", async (req, res) => {
+  await PartnerRequest.findByIdAndUpdate(req.params.id, {
+    status: "approved"
+  });
+  res.redirect("/admin/create-partner");
+});
+
+app.post("/admin/partner-requests/:id/reject", async (req, res) => {
+  await PartnerRequest.findByIdAndUpdate(req.params.id, {
+    status: "rejected"
+  });
+  res.redirect("/admin/create-partner");
 });
 
 app.post("/admin/create-partner", async (req, res) => {
