@@ -966,7 +966,7 @@ app.post("/admin/partner-requests/:id/reject", async (req, res) => {
 app.post("/admin/create-partner", async (req, res) => {
   try {
     const { name } = req.body;
-
+     const requests = await PartnerRequest.find().sort({ createdAt: -1 });
     if (!name || !name.trim()) {
       return res.render("admin_create_partner", {
         apiKey: null,
@@ -977,6 +977,7 @@ app.post("/admin/create-partner", async (req, res) => {
     const p1 = await Partner.findOne({name : name});
     if(p1){
       return res.render("admin_create_partner",{
+        requests,
         apiKey : null,
         partnerName : null,
         error : "Partner already exists"
@@ -990,6 +991,7 @@ app.post("/admin/create-partner", async (req, res) => {
     });
 
     res.render("admin_create_partner", {
+      requests,
       apiKey: partner.apiKey,
       partnerName: partner.name,
       error: null
