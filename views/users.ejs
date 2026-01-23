@@ -1,155 +1,242 @@
-
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Funnel Dashboard</title>
+  <title>User Management | Admin</title>
 
-  <!-- Bootstrap & Font Awesome -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
 
- <style>
-  body {
-    background: linear-gradient(135deg, #eef2ff, #fef9ff);
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    overflow-x: hidden;
-  }
+  <style>
+    :root {
+      --bg-body: #f8fafc;
+      --border-color: #e2e8f0;
+      --indigo-accent: #4f46e5;
+    }
 
-  .main-wrapper {
-    margin-left: 250px;
-    padding: 2rem;
-    transition: margin-left 0.3s ease;
-  }
-
-  nav.sidebar {
-    width: 250px;
-    height: 100vh;
-    position: fixed;
-    top: 56px;
-    left: 0;
-    background: #ffffff;
-    padding: 1rem;
-    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
-    z-index: 1040;
-  }
-
-  @media (max-width: 991px) {
-    nav.sidebar {
-      display: none;
+    body {
+      background-color: var(--bg-body);
+      font-family: 'Inter', sans-serif;
+      color: #1e293b;
     }
 
     .main-wrapper {
-      margin-left: 0;
-      padding: 1rem;
+      margin-left: 260px; /* Aligned with your sidebar */
+      padding-top: 90px;
+      padding-bottom: 2rem;
+      transition: all 0.3s ease;
     }
-  }
 
-  .admin-header h2 {
-    font-weight: 600;
-    color: #0d6efd;
-    margin-bottom: 1rem;
-  }
+    /* Table Container Card */
+    .data-card {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+    }
 
-  .table-wrapper {
-    background: #fff;
-    padding: 1.5rem;
-    border-radius: 12px;
-    box-shadow: 0 0 14px rgba(0, 0, 0, 0.05);
-  }
+    .table thead th {
+      background: #f8fafc;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      padding: 1.25rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+    }
 
-  .table th,
-  .table td {
-    vertical-align: middle;
-    font-size: 0.95rem;
-  }
+    .table tbody td {
+      padding: 1rem;
+      vertical-align: middle;
+      font-size: 0.9rem;
+      border-bottom: 1px solid #f1f5f9;
+    }
 
-  .table-hover tbody tr:hover {
-    background-color: #f8f9fa;
-  }
+    /* User Profile Mini-Section */
+    .user-info-cell {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
 
-  .badge-status {
-    font-size: 0.8rem;
-    padding: 0.35em 0.6em;
-  }
+    .user-avatar {
+      width: 36px;
+      height: 36px;
+      background: #eef2ff;
+      color: var(--indigo-accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.8rem;
+    }
 
-  .btn-delete {
-    font-size: 0.8rem;
-    padding: 0.25rem 0.6rem;
-  }
-</style>
+    /* Method Badges */
+    .method-badge {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
 
+    .method-google { background: #fff1f2; color: #e11d48; }
+    .method-phone { background: #f0fdf4; color: #166534; }
+
+    /* Status Indicators */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 2px 10px;
+      border-radius: 50px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .status-active { background: #dcfce7; color: #15803d; }
+    .status-inactive { background: #f1f5f9; color: #64748b; }
+
+    .btn-delete-ghost {
+      color: #94a3b8;
+      border: none;
+      background: transparent;
+      padding: 5px 10px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-delete-ghost:hover {
+      background: #fee2e2;
+      color: #ef4444;
+    }
+
+    @media (max-width: 991px) {
+      .main-wrapper { margin-left: 0; padding: 1rem; padding-top: 100px; }
+    }
+  </style>
 </head>
 
-<!-- Navbar -->
-<%- include("./imports/adminTopbar") %>
+<body>
 
-<!-- Sidebar -->
-<%- include("./imports/adminSidebar") %>
+  <%- include("./imports/adminTopbar") %>
 
-<!-- Main Content -->
-<div class="main-wrapper">
-  <div class="container-fluid mt-5">
-    <div class="admin-header mb-3">
-      <h2>👥 User Management</h2>
-    </div>
+  <%- include("./imports/adminSidebar") %>
 
-    <div class="table-wrapper">
-      <table class="table table-bordered table-hover align-middle">
-        <thead class="table-dark">
-          <tr>
-            <th>#</th>
-            <th>Name</th>
-            <th>Phone</th>
-            <th>Email</th>
-            <th>Login Method</th>
-            <th>Created</th>
-            <th>Status</th>
-            <th class="text-center">Actions</th>
-            <th>Last Login</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% users.forEach((u, index)=> { %>
-            <tr>
-              <td><%= index + 1 %></td>
-              <td><%= u.username || "N/A" %></td>
-              <td><%= u.phone || "—" %></td>
-              <td><%= u.email || "—" %></td>
-              <td>
-                <span class="badge bg-info text-dark badge-status">
-                  <%= u.phone ? "Phone OTP" : "Google OAuth" %>
-                </span>
-              </td>
-              <td><%= new Date(u.createdAt).toLocaleString("en-IN") %></td>
-              <td>
-                <% const last = new Date(u.lastLogin); const now = new Date(); const diffDays = (now - last) / (1000 * 60 * 60 * 24); %>
-                <% if (!u.lastLogin) { %>
-                  <span class="badge bg-secondary badge-status">Inactive</span>
-                <% } else if (diffDays <= 20) { %>
-                  <span class="badge bg-success badge-status">Active</span>
-                <% } else { %>
-                  <span class="badge bg-warning text-dark badge-status">Inactive</span>
-                <% } %>
-              </td>
-              <td class="text-center">
-                <% if (process.env.NODE_ENV !== "production") { %>
-                  <form action="/admin/users/<%= u._id %>/delete" method="POST" onsubmit="return confirm('Delete this user?');" class="d-inline">
-                    <button class="btn btn-sm btn-outline-danger btn-delete">
-                      <i class="bi bi-trash"></i> Delete
-                    </button>
-                  </form>
-                <% } else { %>
-                  <span class="text-muted small">Locked</span>
-                <% } %>
-              </td>
-              <td><%= u.lastLogin ? new Date(u.lastLogin).toLocaleString("en-IN") : "—" %></td>
-            </tr>
-          <% }) %>
-        </tbody>
-      </table>
+  <div class="main-wrapper">
+    <div class="container-fluid px-lg-4">
+      
+      <div class="d-flex justify-content-between align-items-end mb-4">
+        <div>
+          <h2 class="fw-bold mb-1">User Management</h2>
+          <p class="text-muted small mb-0">Monitor registered users and their authentication activity.</p>
+        </div>
+        <div class="d-flex gap-3">
+          <div class="text-end">
+            <span class="d-block small text-muted">Total Users</span>
+            <span class="fw-bold fs-5"><%= users.length %></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="data-card">
+        <div class="table-responsive">
+          <table class="table mb-0">
+            <thead>
+              <tr>
+                <th>Account</th>
+                <th>Contact Details</th>
+                <th>Access Method</th>
+                <th>Status</th>
+                <th>Created At</th>
+                <th>Last Login</th>
+                <th class="text-end">Manage</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% users.forEach((u, index)=> { %>
+                <tr>
+                  <td>
+                    <div class="user-info-cell">
+                      <div class="user-avatar">
+                        <%= (u.username ? u.username.substring(0,2) : "??").toUpperCase() %>
+                      </div>
+                      <div>
+                        <div class="fw-semibold text-dark"><%= u.username || "Guest User" %></div>
+                        <div class="text-muted small">UID: <%= u._id.toString().substring(0,8) %></div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td>
+                    <div class="small"><i class="fa-solid fa-phone me-2 text-muted opacity-50"></i><%= u.phone || "—" %></div>
+                    <div class="small"><i class="fa-solid fa-envelope me-2 text-muted opacity-50"></i><%= u.email || "—" %></div>
+                  </td>
+
+                  <td>
+                    <% if (u.phone) { %>
+                      <span class="method-badge method-phone">
+                        <i class="fa-solid fa-mobile-screen-button"></i> OTP
+                      </span>
+                    <% } else { %>
+                      <span class="method-badge method-google">
+                        <i class="fa-brands fa-google"></i> Google
+                      </span>
+                    <% } %>
+                  </td>
+
+                  <td>
+                    <% 
+                      const last = new Date(u.lastLogin); 
+                      const now = new Date(); 
+                      const diffDays = (now - last) / (1000 * 60 * 60 * 24); 
+                    %>
+                    <% if (!u.lastLogin || diffDays > 20) { %>
+                      <span class="status-pill status-inactive">
+                        <i class="fa-solid fa-circle small"></i> Inactive
+                      </span>
+                    <% } else { %>
+                      <span class="status-pill status-active">
+                        <i class="fa-solid fa-circle small"></i> Active
+                      </span>
+                    <% } %>
+                  </td>
+
+                  <td><span class="text-muted small"><%= new Date(u.createdAt).toLocaleDateString("en-IN") %></span></td>
+                  <td>
+                    <div class="small"><%= u.lastLogin ? new Date(u.lastLogin).toLocaleDateString("en-IN") : "Never" %></div>
+                    <div class="text-muted x-small" style="font-size: 0.7rem;"><%= u.lastLogin ? new Date(u.lastLogin).toLocaleTimeString("en-IN", {hour: '2-digit', minute:'2-digit'}) : "" %></div>
+                  </td>
+
+                  <td class="text-end">
+                    <% if (process.env.NODE_ENV !== "production") { %>
+                      <form action="/admin/users/<%= u._id %>/delete" method="POST" onsubmit="return confirm('Permanently remove this user?');" class="d-inline">
+                        <button class="btn-delete-ghost" title="Delete Account">
+                          <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                      </form>
+                    <% } else { %>
+                      <i class="fa-solid fa-lock text-muted opacity-50 small"></i>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
     </div>
   </div>
-</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

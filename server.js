@@ -931,81 +931,93 @@ app.get("/analytics/lockers", async (req, res) => {
 
 const crypto = require("crypto");
 const Partner = require("./models/partnerSchema.js");
+const PartnerRequest = require("./models/partnerRequest");
+
 
 function generateApiKey(partnerName) {
+  const safeName = partnerName.toLowerCase().replace(/[^a-z0-9]/g, "");
   const random = crypto.randomBytes(24).toString("hex");
-  return `dp_live_${partnerName.toLowerCase()}_${random}`;
+  return `dp_live_${safeName}_${random}`;
 }
 
 
-const PartnerRequest = require("./models/partnerRequest");
 
-app.get("/admin/create-partner", async(req, res) => {
-   const requests = await PartnerRequest.find().sort({ createdAt: -1 });
-  res.render("admin_create_partner", {
-     requests,
-    apiKey: null,
-    partnerName: null,
-    error: null
-  });
-});
-app.post("/admin/partner-requests/:id/approve", async (req, res) => {
-  await PartnerRequest.findByIdAndUpdate(req.params.id, {
-    status: "approved"
-  });
-  res.redirect("/admin/create-partner");
-});
 
-app.post("/admin/partner-requests/:id/reject", async (req, res) => {
-  await PartnerRequest.findByIdAndUpdate(req.params.id, {
-    status: "rejected"
-  });
-  res.redirect("/admin/create-partner");
-});
-
-app.post("/admin/create-partner", async (req, res) => {
+app.get("/admin/create-partner", async (req, res) => {
   try {
-    const { name } = req.body;
-     const requests = await PartnerRequest.find().sort({ createdAt: -1 });
-    if (!name || !name.trim()) {
-      return res.render("admin_create_partner", {
-        apiKey: null,
-        partnerName: null,
-        error: "Partner name is required"
-      });
-    }
-    const p1 = await Partner.findOne({name : name});
-    if(p1){
-      return res.render("admin_create_partner",{
-        requests,
-        apiKey : null,
-        partnerName : null,
-        error : "Partner already exists"
-    })
-    }
-    const apiKey = generateApiKey(name);
-
-    const partner = await Partner.create({
-      name,
-      apiKey
-    });
+    const requests = await PartnerRequest.find().sort({ createdAt: -1 });
 
     res.render("admin_create_partner", {
-      requests,
-      apiKey: partner.apiKey,
-      partnerName: partner.name,
-      error: null
+      requests
     });
-
-  } catch (err) {
-    console.error(err);
-    res.render("admin_create_partner", {
-      apiKey: null,
-      partnerName: null,
-      error: "Something went wrong"
-    });
+  } catch (e) {
+    console.error(e);
+    res.send("Internal error");
   }
 });
+
+app.post("/admin/partner-requests/:id/approve", async (req, res) => {
+  try {
+    const request = await PartnerRequest.findById(req.params.id);
+    if (!request) return res.redirect("/admin/create-partner");
+
+    // Prevent double approval
+    if (request.status !== "pending") {
+      return res.redirect("/admin/create-partner");
+    }
+
+    // Check if partner already exists
+    const existing = await Partner.findOne({ email: request.email });
+
+    if (!existing) {
+      const apiKey = generateApiKey(request.companyName);
+
+      await Partner.create({
+        name: request.contactName,
+        email: request.email,
+        phone: request.phone,
+        companyName: request.companyName,
+        apiKey,
+        isApproved: true,
+      });
+    }
+
+    request.status = "approved";
+    await request.save();
+
+    res.redirect("/admin/create-partner");
+  } catch (e) {
+    console.error("APPROVE ERROR:", e);
+    res.redirect("/admin/create-partner");
+  }
+});
+
+
+
+app.post("/admin/partner-requests/:id/reject", async (req, res) => {
+  try {
+    await PartnerRequest.findByIdAndUpdate(req.params.id, {
+      status: "rejected",
+    });
+  } catch (e) {
+    console.error("REJECT ERROR:", e);
+  }
+
+  res.redirect("/admin/create-partner");
+});
+
+
+
+  // List all partners for modal
+app.get("/admin/api/partners", async (req, res) => {
+  try {
+    const partners = await Partner.find().sort({ createdAt: -1 }).lean();
+    res.json({ success: true, partners });
+  } catch (e) {
+    res.status(500).json({ success: false });
+  }
+});
+
 
 
 

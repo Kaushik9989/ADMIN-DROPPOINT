@@ -2,154 +2,215 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Locker Analytics</title>
+  <title>Locker Analytics | DropPoint</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- Bootstrap -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
-
-  <!-- Font Awesome -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
-
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
+    :root {
+      --bg-body: #f8fafc;
+      --indigo-accent: #4f46e5;
+      --border-color: #e2e8f0;
+      --sidebar-width: 260px;
+      --topbar-height: 70px;
+    }
+
     body {
-      background: linear-gradient(135deg, #eef2ff, #fef9ff);
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg-body);
+      font-family: 'Inter', sans-serif;
+      color: #1e293b;
+      margin: 0;
       overflow-x: hidden;
     }
 
-    nav.sidebar {
-      width: 250px;
-      height: 100vh;
-      position: fixed;
-      top: 56px;
-      left: 0;
-      background: #fff;
-      padding: 1rem;
-      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
-      z-index: 1040;
-    }
-
+    /* Fixed Main Wrapper Logic */
     .main-wrapper {
-  margin-left: 250px;
-  padding-top: 56px;    /* same as navbar height */
-  padding-left: 2rem;
-  padding-right: 2rem;
-  padding-bottom: 2rem;
-}
-
-
-    @media (max-width: 991px) {
-      nav.sidebar {
-        display: none;
-      }
-      .main-wrapper {
-        margin-left: 0;
-        padding: 1.5rem 1rem;
-      }
+      margin-left: var(--sidebar-width);
+      padding: 30px;
+      margin-top: var(--topbar-height);
+      min-height: calc(100vh - var(--topbar-height));
+      transition: all 0.3s ease;
     }
 
-    .card {
-      border-radius: 18px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-      border: none;
+    .data-card {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      position: relative;
+    }
+
+    /* Search & List Area */
+    .search-box {
+      background: #f1f5f9;
+      border: 1px solid transparent;
+      padding: 12px 15px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+
+    .search-box:focus {
+      background: white;
+      border-color: var(--indigo-accent);
+      box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+      outline: none;
+    }
+
+    .locker-scroll-area {
+      height: 550px; /* Fixed height for better control */
+      overflow-y: auto;
+      margin-top: 10px;
     }
 
     .locker-card {
-      cursor: pointer;
-      transition: 0.2s;
+      padding: 15px;
+      margin-bottom: 10px;
+      border: 1px solid #f1f5f9;
       border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: white;
     }
 
     .locker-card:hover {
-      background: #f1f5ff;
-      transform: scale(1.01);
+      border-color: var(--indigo-accent);
+      background: #f5f3ff;
+      transform: translateX(4px);
     }
 
     .locker-card.active {
-      border: 2px solid #5a67d8;
-      background: #eef2ff;
+      background: var(--indigo-accent);
+      border-color: var(--indigo-accent);
+      box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
     }
 
+    .locker-card.active strong, 
+    .locker-card.active small,
+    .locker-card.active i {
+      color: white !important;
+    }
 
-@media (max-width: 991px) {
-  .top-navbar {
-    left: 0;
-    width: 100%;
-  }
-}
+    /* Stat Badges */
+    .mini-stat {
+      background: #f8fafc;
+      padding: 8px 15px;
+      border-radius: 10px;
+      text-align: center;
+      border: 1px solid #edf2f7;
+      min-width: 80px;
+    }
 
+    .transition-all { transition: all 0.4s ease; }
+
+    @media (max-width: 991px) {
+      .main-wrapper { 
+        margin-left: 0; 
+        padding: 20px;
+      }
+    }
   </style>
 </head>
 <body>
 
-<!-- NAVBAR -->
-<!-- NAVBAR -->
 <%- include("./imports/adminTopbar") %>
-
-<!-- SIDEBAR -->
 <%- include("./imports/adminSidebar") %>
 
-<!-- MAIN CONTENT -->
 <div class="main-wrapper">
-
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="fw-bold">📊 Locker Usage Analytics</h3>
-    <span class="text-muted">Click a locker to view usage</span>
+  <div class="row align-items-center mb-4">
+    <div class="col-md-8">
+      <h2 class="fw-bold mb-1">Locker Usage Analytics</h2>
+      <p class="text-muted mb-0">Select a specific locker hub to visualize interaction trends.</p>
+    </div>
+    <div class="col-md-4 text-md-end d-none d-md-block">
+        <div class="d-inline-flex align-items-center bg-white border px-3 py-2 rounded-pill shadow-sm">
+            <span class="status-dot bg-success me-2"></span>
+            <span class="small fw-semibold text-dark">Data Feed: Live</span>
+        </div>
+    </div>
   </div>
 
   <div class="row g-4">
+    <div class="col-lg-4">
+      <div class="data-card p-4">
+        <h6 class="fw-bold mb-3 text-uppercase small text-muted">Network Hubs</h6>
+        <div class="position-relative mb-2">
+            <input type="text" id="lockerSearch" class="form-control search-box" 
+                   placeholder="Search ID or Location..." onkeyup="filterLockers()">
+        </div>
 
-    <!-- LOCKER LIST -->
-    <div class="col-md-4">
-      <div class="card p-3 h-100">
-      <h5 class="mb-3 fw-semibold">📍 All Lockers</h5>
-
-<input type="text"
-       id="lockerSearch"
-       class="form-control mb-3"
-       placeholder="🔍 Search by Locker ID..."
-       onkeyup="filterLockers()">
-
-
-<div class="list-group" id="lockerList" style="max-height: 70vh; overflow-y: auto;">
-
+        <div class="locker-scroll-area pe-2" id="lockerList">
           <% lockers.forEach(l => { %>
-<div class="list-group-item locker-card"
-     data-lockerid="<%= l.lockerId.toLowerCase() %>"
-     onclick='showChart(this, <%- JSON.stringify(l) %>)'>
-
-              <strong><%= l.lockerId %></strong><br/>
-              <small class="text-muted"><%= l.location?.address || "Unknown location" %></small>
-
-            
+            <div class="locker-card" data-lockerid="<%= l.lockerId.toLowerCase() %>"
+                 onclick='showChart(this, <%- JSON.stringify(l) %>)'>
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="overflow-hidden">
+                    <strong class="d-block text-dark text-truncate"><%= l.lockerId %></strong>
+                    <small class="text-muted d-block text-truncate">
+                        <i class="fa-solid fa-location-dot me-1"></i><%= l.location?.address?.split(',')[0] || "Location Unset" %>
+                    </small>
+                </div>
+                <i class="fa-solid fa-chevron-right text-muted opacity-50"></i>
+              </div>
             </div>
           <% }) %>
         </div>
       </div>
     </div>
 
-    <!-- CHART -->
-    <div class="col-md-8">
-      <div class="card p-4 h-100">
-        <h5 id="chartTitle" class="fw-semibold mb-3">Select a locker to view analytics</h5>
-        <div style="height: 420px;">
+    <div class="col-lg-8">
+      <div class="data-card p-4">
+        
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+            <h5 id="chartTitle" class="fw-bold mb-0 text-dark">Select a Hub</h5>
+            <div id="quickStats" class="d-flex gap-2 opacity-0 transition-all">
+                <div class="mini-stat">
+                    <small class="text-muted d-block">Store</small>
+                    <span id="statStore" class="fw-bold text-primary">0</span>
+                </div>
+                <div class="mini-stat">
+                    <small class="text-muted d-block">Send</small>
+                    <span id="statSend" class="fw-bold text-success">0</span>
+                </div>
+                <div class="mini-stat">
+                    <small class="text-muted d-block">Drop</small>
+                    <span id="statDrop" class="fw-bold text-warning">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-grow-1" style="min-height: 400px; position: relative;">
           <canvas id="lockerChart"></canvas>
+          
+          <div id="chartPlaceholder" class="position-absolute top-50 start-50 translate-middle text-center w-100">
+              <div class="bg-light d-inline-flex align-items-center justify-content-center rounded-circle mb-3" style="width: 80px; height: 80px;">
+                <i class="fa-solid fa-chart-bar fs-2 text-muted opacity-50"></i>
+              </div>
+              <h6 class="text-dark fw-bold">No Hub Selected</h6>
+              <p class="text-muted small">Choose a locker from the left panel to load analytics.</p>
+          </div>
         </div>
       </div>
     </div>
-
   </div>
 </div>
 
-<!-- SCRIPT -->
+[Image of a professional bar chart showing analytical data for a physical locker system]
+
 <script>
   let chartInstance = null;
 
   function showChart(element, locker) {
+    // Reveal UI elements
+    document.getElementById("chartPlaceholder").classList.add("d-none");
+    document.getElementById("quickStats").classList.remove("opacity-0");
     document.querySelectorAll(".locker-card").forEach(el => el.classList.remove("active"));
     element.classList.add("active");
 
@@ -157,8 +218,11 @@
     const send = locker.stats?.sendClicks || 0;
     const drop = locker.stats?.dropClicks || 0;
 
-    document.getElementById("chartTitle").innerText =
-      `📦 Locker ${locker.lockerId} Usage Stats`;
+    // Update Numerical Stats
+    document.getElementById("statStore").innerText = store;
+    document.getElementById("statSend").innerText = send;
+    document.getElementById("statDrop").innerText = drop;
+    document.getElementById("chartTitle").innerText = `Hub: ${locker.lockerId}`;
 
     const ctx = document.getElementById("lockerChart").getContext("2d");
 
@@ -166,76 +230,58 @@
       chartInstance.destroy();
     }
 
-// Subtle professional gradient
-const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-gradient.addColorStop(0, "#5a67d8");
-gradient.addColorStop(1, "#c3dafe");
+    // Modern Gradient
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, '#4f46e5');
+    gradient.addColorStop(1, '#818cf8');
 
-chartInstance = new Chart(ctx, {
-  type: "bar",
-  data: {
-    labels: ["Store", "Send", "Drop"],
-    datasets: [{
-      label: "Clicks",
-      data: [store, send, drop],
-      backgroundColor: gradient,
-      borderRadius: 6,
-      borderSkipped: false,
-      barThickness: 36,
-      maxBarThickness: 40
-    }]
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: {
-      duration: 400
-    },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: "#1f2937",
-        padding: 10,
-        titleFont: { size: 12 },
-        bodyFont: { size: 12 }
-      }
-    },
-    scales: {
-      x: {
-        grid: { display: false },
-        ticks: {
-          font: { size: 12 }
-        }
+    chartInstance = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: ["Storage Flow", "Shipping Flow", "Direct Drop"],
+        datasets: [{
+          label: "Volume",
+          data: [store, send, drop],
+          backgroundColor: gradient,
+          borderRadius: 10,
+          barThickness: 50,
+        }]
       },
-      y: {
-        beginAtZero: true,
-        grid: {
-          color: "rgba(0,0,0,0.06)"
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1e293b',
+            padding: 15,
+            cornerRadius: 10,
+            titleFont: { size: 14, weight: 'bold' }
+          }
         },
-        ticks: {
-          precision: 0,
-          font: { size: 11 }
+        scales: {
+          y: { 
+            beginAtZero: true,
+            grid: { color: '#f1f5f9' },
+            ticks: { color: '#94a3b8' }
+          },
+          x: { 
+            grid: { display: false },
+            ticks: { color: '#64748b', font: { weight: '600' } }
+          }
         }
       }
-    }
+    });
   }
-});
 
-  }
   function filterLockers() {
-  const input = document.getElementById("lockerSearch").value.toLowerCase();
-  const items = document.querySelectorAll("#lockerList .locker-card");
-
-  items.forEach(item => {
-    const lockerId = item.getAttribute("data-lockerid");
-    if (lockerId.includes(input)) {
-      item.style.display = "";
-    } else {
-      item.style.display = "none";
-    }
-  });
-}
-
+    const input = document.getElementById("lockerSearch").value.toLowerCase();
+    const items = document.querySelectorAll("#lockerList .locker-card");
+    items.forEach(item => {
+      const text = item.innerText.toLowerCase();
+      item.style.display = text.includes(input) ? "" : "none";
+    });
+  }
 </script>
 
 </body>

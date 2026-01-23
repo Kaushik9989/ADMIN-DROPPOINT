@@ -1,49 +1,161 @@
-<nav
-        class="bg-white shadow-lg vh-100 p-3"
-        style="width: 250px; position: fixed; top: 56px; left: 0"
-      >
-        <ul class="nav flex-column">
-          <li class="nav-item mb-2">
-            <a class="nav-link text-dark" href="/admin/dashboard"
-              ><i class="fas fa-home me-2"></i>Dashboard</a
-            >
-          </li>
-          <li class="nav-item mb-2">
-            <a class="nav-link text-dark" href="/admin/add-locker"
-              ><i class="fas fa-plus me-2"></i>Add Locker</a
-            >
-            <!-- <li class="nav-item mb-2">
-      <a class="nav-link text-dark" href="/merchantValidate"><i class="fa-solid fa-users me-2"></i>Validate Merchants</a>
-    </li> -->
-          </li>
-           <li class="nav-item mb-2">
-            <a class="nav-link text-dark" href="/admin/analytics"
-              ><i class="fa-solid fa-chart-line me-2"></i>Website Analytics</a
-            >
-          </li>
-           <li class="nav-item mb-2"><a class="nav-link text-dark fw" href="/admin/create-partner"><i class="fa-solid fa-code"></i>  Generate API</a></li>
+<style>
+  /* Sidebar Container */
+  .sidebar-nav {
+    width: 260px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    background: #1e293b; /* Modern Slate-900 */
+    color: #cbd5e1;
+    z-index: 1030;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem 1rem;
+  }
 
-           <li class="nav-item mb-2">
-            <a class="nav-link text-dark" href="/analytics/lockers"
-              ><i class="fa-solid fa-chart-line me-2"></i>Locker Analytics</a
-            >
-          </li>
-          </li>
-           <li class="nav-item mb-2">
-      <a class="nav-link text-dark" href="/Action_funnel"><i class="fa-solid fa-chart-line me-2"></i>Funnel Actions</a>
+  /* Sidebar Branding (Optional addition) */
+  .sidebar-brand {
+    padding: 0 1rem 2rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Nav Links */
+  .sidebar-nav .nav-link {
+    color: #94a3b8;
+    padding: 0.8rem 1rem;
+    border-radius: 10px;
+    font-size: 0.925rem;
+    font-weight: 500;
+    margin-bottom: 4px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+  }
+
+  .sidebar-nav .nav-link i {
+    width: 24px;
+    font-size: 1.1rem;
+    margin-right: 12px;
+    transition: transform 0.2s;
+  }
+
+  /* Hover & Active States */
+  .sidebar-nav .nav-link:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+  }
+
+  .sidebar-nav .nav-link:hover i {
+    transform: translateX(3px);
+  }
+
+  .sidebar-nav .nav-link.active {
+    background: #4f46e5; /* Indigo-600 */
+    color: #fff;
+  }
+
+  /* Section Dividers */
+  .nav-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1rem;
+    color: #64748b;
+    margin: 1.5rem 0 0.5rem 1rem;
+    font-weight: 700;
+  }
+
+  /* Logout Button */
+  .logout-wrapper {
+    margin-top: auto;
+    padding-top: 2rem;
+  }
+
+  .btn-logout {
+    background: rgba(239, 68, 68, 0.1);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .btn-logout:hover {
+    background: #ef4444;
+    color: #fff;
+    border-color: #ef4444;
+  }
+</style>
+
+<nav class="sidebar-nav">
+  <div class="sidebar-brand">
+    Droppoint
+  </div>
+
+  <ul class="nav flex-column">
+    <li class="nav-item">
+      <a class="nav-link active" href="/admin/dashboard">
+        <i class="fas fa-home"></i> Dashboard
+      </a>
     </li>
-    <li class="nav-item mb-2">
-      <a class="nav-link text-dark" href="/users"><i class="fa-solid fa-chart-line me-2"></i>User Management</a>
+
+    <div class="nav-label">Management</div>
+    
+    <li class="nav-item">
+      <a class="nav-link" href="/admin/add-locker">
+        <i class="fas fa-plus-circle"></i> Add Locker
+      </a>
     </li>
-          <li class="nav-item mb-2">
-            <a class="nav-link text-dark" href="/admin/bookings"
-              ><i class="fas fa-list me-2"></i>All Bookings</a
-            >
-          
-          <li class="nav-item mt-4">
-            <a class="btn btn-outline-danger w-100" href="/admin/logout"
-              ><i class="fas fa-sign-out-alt me-2"></i>Logout</a
-            >
-          </li>
-        </ul>
-      </nav>
+
+    <li class="nav-item">
+      <a class="nav-link" href="/admin/bookings">
+        <i class="fas fa-calendar-check"></i> All Bookings
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a class="nav-link" href="/users">
+        <i class="fa-solid fa-users-gear"></i> User Management
+      </a>
+    </li>
+
+    <div class="nav-label">Partners</div>
+
+    <li class="nav-item">
+      <a class="nav-link" href="/admin/create-partner">
+        <i class="fa-solid fa-handshake"></i> Onboard Partner
+      </a>
+    </li>
+
+    <div class="nav-label">Reports</div>
+
+    <li class="nav-item">
+      <a class="nav-link" href="/admin/analytics">
+        <i class="fa-solid fa-chart-pie"></i> Website Analytics
+      </a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-link" href="/analytics/lockers">
+        <i class="fa-solid fa-box-archive"></i> Locker Analytics
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a class="nav-link" href="/Action_funnel">
+        <i class="fa-solid fa-filter"></i> Funnel Actions
+      </a>
+    </li>
+  </ul>
+
+  
+</nav>

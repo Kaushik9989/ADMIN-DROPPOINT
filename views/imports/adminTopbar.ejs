@@ -1,37 +1,99 @@
-<nav
-      class="navbar navbar-expand-lg navbar-dark"
-      style="background: #5a67d8; position: fixed; width: 100%; z-index: 1050"
-    >
-      <div class="container-fluid">
-        <a class="navbar-brand ms-3" href="/admin/dashboard">
-          <i class="fas fa-tools me-2"></i>Admin Panel
-        </a>
-        <button
-          class="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#topNavbar"
-          aria-controls="topNavbar"
-          aria-expanded="false"
-          aria-label="Toggle navigation"
-        >
-          <span class="navbar-toggler-icon"></span>
-        </button>
+<style>
+  .topbar {
+    position: fixed;
+    top: 0;
+    left: 260px; /* same as sidebar width */
+    right: 0;
+    height: 64px;
+    background: rgba(30, 41, 59, 0.85); /* slate-900 glass */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    z-index: 1040;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+  }
 
-        <div class="collapse navbar-collapse" id="topNavbar">
-          <ul class="navbar-nav ms-auto me-3 mb-2 mb-lg-0 align-items-center">
-            <li class="nav-item me-3">
-              <span class="navbar-text text-white">
-                Welcome, Admin
-                <span class="badge bg-primary">Admin</span>
-                
-            </li>
-            <li class="nav-item">
-              <a class="btn btn-outline-light btn-sm" href="/admin/logout">
-                <i class="fas fa-sign-out-alt me-1"></i>Logout
-              </a>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </nav>
+  .topbar-brand {
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+  }
+
+  .topbar-brand i {
+    color: #6366f1;
+    margin-right: 10px;
+    font-size: 1.1rem;
+  }
+
+  .topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .admin-pill {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 6px 14px;
+    border-radius: 999px;
+    color: #e5e7eb;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .admin-pill i {
+    color: #818cf8;
+  }
+
+  .logout-btn-topbar {
+    background: rgba(239,68,68,0.12);
+    color: #f87171;
+    border: 1px solid rgba(239,68,68,0.25);
+    padding: 6px 14px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+    text-decoration: none;
+  }
+
+  .logout-btn-topbar:hover {
+    background: #ef4444;
+    color: #fff;
+    border-color: #ef4444;
+  }
+
+  @media (max-width: 992px) {
+    .topbar {
+      left: 0;
+    }
+  }
+</style>
+
+<!-- Modern Topbar -->
+<div class="topbar">
+  <a href="/admin/dashboard" class="topbar-brand">
+   
+   
+  </a>
+
+  <div class="topbar-right">
+    <div class="admin-pill">
+      <i class="fa-solid fa-user-shield"></i>
+      <span>Admin</span>
+    </div>
+
+    <a href="/admin/logout" class="logout-btn-topbar">
+      <i class="fa-solid fa-right-from-bracket me-1"></i>
+      Logout
+    </a>
+  </div>
+</div>

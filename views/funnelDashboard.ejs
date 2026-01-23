@@ -1,320 +1,313 @@
-
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Funnel Dashboard</title>
+  <title>Funnel Analytics | DropPoint</title>
 
-  <!-- Bootstrap & Font Awesome -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
 
   <style>
-    body {
-  background: linear-gradient(135deg, #eef2ff, #fef9ff);
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  overflow-x: hidden;
-}
-
-.main-wrapper {
- 
-  padding: 2rem 2rem;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-.card {
-  border-radius: 15px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-  background: #ffffff;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
-}
-
-.table th, .table td {
-  vertical-align: middle;
-}
-
-@media (max-width: 991px) {
-  .main-wrapper {
-    margin-left: 0;
-    padding: 1rem;
-  }
-
-  nav.sidebar {
-    display: none;
-  }
-}
+    :root {
+      --bg-body: #f8fafc;
+      --border-color: #e2e8f0;
+      --indigo-accent: #4f46e5;
+      --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
 
     body {
-      background: linear-gradient(135deg, #eef2ff, #fef9ff);
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      overflow-x: hidden;
+      background-color: var(--bg-body);
+      font-family: 'Inter', sans-serif;
+      color: #1e293b;
     }
 
     .main-wrapper {
-      margin-left: 150px;
-      padding: 2rem 2rem 2rem 2rem;
-      max-width: 100%;
-      box-sizing: border-box;
+      margin-left: 260px; /* Aligned with your sidebar */
+      padding: 90px 2rem 2rem 2rem;
+      transition: all 0.3s ease;
+    }
+
+    /* Analytics Cards */
+    .stat-card {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: var(--card-shadow);
+      height: 100%;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+
+    .stat-value {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    /* Funnel Specific UI */
+    .chart-container {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: var(--card-shadow);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 1.5rem;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    /* Table Enhancements */
+    .table-custom {
+      border: 1px solid #f1f5f9;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .table-custom thead {
+      background: #f8fafc;
+    }
+
+    .table-custom th {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: #64748b;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    /* Drop-off Visualizer */
+    .dropoff-text {
+      color: #ef4444;
+      font-weight: 600;
+      font-size: 0.85rem;
     }
 
     @media (max-width: 991px) {
-      .main-wrapper {
-        margin-left: 0;
-        padding: 1.5rem 1rem;
-      }
-
-      nav.sidebar {
-        display: none;
-      }
-    }
-
-
-    body {
-      background: linear-gradient(135deg, #eef2ff, #fef9ff);
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    }
-
-    .card {
-      border-radius: 15px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-      background: #ffffff;
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
-    }
-
-    .helli {
-
-      padding-top: 2rem;
-      padding-bottom: 2rem;
-
-
-
-    }
-
-    .table th,
-    .table td {
-      vertical-align: middle;
+      .main-wrapper { margin-left: 0; padding: 100px 1rem 1.5rem; }
     }
   </style>
 </head>
 
 <body class="min-vh-100">
-  <!-- Top Navbar -->
   <%- include("./imports/adminTopbar") %>
+  <%- include("./imports/adminSidebar") %>
 
-  <div class="d-flex" style="padding-top: 56px">
-    <!-- Sidebar -->
-    <%- include("./imports/adminSidebar") %>
-
-    <!-- Main Content -->
-    <div class="container-fluid main-wrapper">
-      <div class="flex-grow-1">
-        <div class="main-wrapper">
-          <h2 class="mb-4"> DropPoint Funnel Dashboard</h2>
-          <!-- Summary -->
-          <div class="row mb-4">
-            <div class="col-md-3">
-              <div class="card p-3">
-                <h6>Total Visits</h6>
-                <h4>
-                  <%= totalVisits %>
-                </h4>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="card p-3">
-                <h6>Dashboard Reached</h6>
-                <h4>
-                  <%= dashboardCount %>
-                </h4>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="card p-3 bg-success-subtle">
-                <h6 class="text-success">Success Rate</h6>
-                <h4>
-                  <%= successRate %>%
-                </h4>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="card p-3 bg-danger-subtle">
-                <h6 class="text-danger">Abandonment Rate</h6>
-                <h4>
-                  <%= abandonmentRate %>%
-                </h4>
-              </div>
-            </div>
-          </div>
-
-          <!-- Funnel Chart -->
-          <div class="card p-4 mb-4">
-            <h5>Step-by-Step Funnel</h5>
-            <canvas id="funnelChart" height="100"></canvas>
-          </div>
-
-          <!-- Stuck Points -->
-          <div class="card p-4 mb-4">
-            <h5>❌ Where Users Are Stuck</h5>
-            <table class="table table-bordered">
-              <thead>
-                <tr>
-                  <th>Step</th>
-                  <th>Users Stuck</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Never clicked login</td>
-                  <td>
-                    <%= stuckStats.at_visit_page %>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Clicked login but didn’t enter OTP</td>
-                  <td>
-                    <%= stuckStats.at_login %>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Entered OTP but didn’t reach dashboard</td>
-                  <td>
-                    <%= stuckStats.at_otp %>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Login Breakdown -->
-          <div class="card p-4 mb-4">
-            <h5>🔐 Login Method Breakdown</h5>
-            <div class="row">
-              <div class="col-md-6">
-                <table class="table">
-                  <thead>
-                    <tr>
-                      <th>Method</th>
-                      <th>Users</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>Phone</td>
-                      <td>
-                        <%= loginPhoneCount %>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>Google</td>
-                      <td>
-                        <%= loginOAuthCount %>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <div class="col-md-6"><canvas id="loginChart" height="180"></canvas></div>
-            </div>
-          </div>
-
-          <!-- Post Dashboard Behavior -->
-          <div class="card p-4 mb-4">
-            <h5>📦 After Dashboard</h5>
-            <table class="table w-50">
-              <thead>
-                <tr>
-                  <th>Action</th>
-                  <th>Users</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Dashboard & Sent Parcel</td>
-                  <td>
-                    <%= sentCount %>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Dashboard & Did NOT Send</td>
-                  <td>
-                    <%= notSentCount %>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Time Insight -->
-          <div class="card p-4">
-            <h5>⏱️ Average Time Between Steps</h5>
-            <table class="table w-50">
-              <thead>
-                <tr>
-                  <th>Step</th>
-                  <th>Avg Time (sec)</th>
-                </tr>
-              </thead>
-              <tbody>
-
-                <tr>
-                  <td>Send Start → Submit</td>
-                  <td>
-                    <%= timingData.avgSendFlow %>
-                  </td>
-                </tr>
-
-              </tbody>
-            </table>
-          </div>
-
+  <div class="main-wrapper">
+    <div class="container-fluid">
+      
+      <div class="d-flex justify-content-between align-items-end mb-4">
+        <div>
+          <h2 class="fw-bold mb-1">Conversion Funnel</h2>
+          <p class="text-muted small mb-0">Track user drop-offs from landing to parcel submission.</p>
+        </div>
+        <div class="badge bg-white text-primary border px-3 py-2 rounded-pill shadow-sm">
+          <i class="fa-solid fa-clock-rotate-left me-2"></i>Real-time Data
         </div>
       </div>
-    </div> <!-- /.main-wrapper -->
-  </div> <!-- /.flex-grow-1 -->
 
+      <div class="row g-4 mb-4">
+        <div class="col-md-3">
+          <div class="stat-card">
+            <span class="stat-label">Total Visits</span>
+            <div class="stat-value"><%= totalVisits %></div>
+            <div class="text-muted small mt-2"><i class="fa-solid fa-users me-1"></i> Unique sessions</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stat-card">
+            <span class="stat-label">Conversions</span>
+            <div class="stat-value text-indigo"><%= dashboardCount %></div>
+            <div class="text-muted small mt-2">Reached Dashboard</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stat-card border-start border-4 border-success">
+            <span class="stat-label text-success">Success Rate</span>
+            <div class="stat-value"><%= successRate %>%</div>
+            <div class="progress mt-3" style="height: 6px;">
+              <div class="progress-bar bg-success" style="width: <%= successRate %>%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stat-card border-start border-4 border-danger">
+            <span class="stat-label text-danger">Churn Rate</span>
+            <div class="stat-value"><%= abandonmentRate %>%</div>
+            <div class="progress mt-3" style="height: 6px;">
+              <div class="progress-bar bg-danger" style="width: <%= abandonmentRate %>%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+          <div class="chart-container h-100">
+            <div class="section-header">
+              <i class="fa-solid fa-filter text-primary"></i> Step-by-Step Conversion
+            </div>
+            <canvas id="funnelChart" style="max-height: 300px;"></canvas>
+          </div>
+        </div>
+        
+        <div class="col-lg-4">
+          <div class="chart-container h-100">
+            <div class="section-header">
+              <i class="fa-solid fa-circle-exclamation text-danger"></i> Drop-off Points
+            </div>
+            <div class="table-responsive">
+              <table class="table table-custom align-middle">
+                <thead>
+                  <tr>
+                    <th>Workflow Step</th>
+                    <th class="text-end">Lost Users</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><small class="fw-medium">Pre-Login</small></td>
+                    <td class="text-end dropoff-text">-<%= stuckStats.at_visit_page %></td>
+                  </tr>
+                  <tr>
+                    <td><small class="fw-medium">OTP Verification</small></td>
+                    <td class="text-end dropoff-text">-<%= stuckStats.at_login %></td>
+                  </tr>
+                  <tr>
+                    <td><small class="fw-medium">Dashboard Entry</small></td>
+                    <td class="text-end dropoff-text">-<%= stuckStats.at_otp %></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="small text-muted mt-3 italic">These users started the process but didn't complete the current step.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-md-6">
+          <div class="chart-container">
+            <div class="section-header"><i class="fa-solid fa-key text-warning"></i> Authentication Preference</div>
+            <div class="row align-items-center">
+              <div class="col-6">
+                <canvas id="loginChart"></canvas>
+              </div>
+              <div class="col-6">
+                <div class="d-flex align-items-center mb-2">
+                  <span class="badge bg-success-subtle border border-success text-success me-2" style="width: 12px; height: 12px; padding:0;"> </span>
+                  <small class="fw-bold">Phone OTP: <%= loginPhoneCount %></small>
+                </div>
+                <div class="d-flex align-items-center">
+                  <span class="badge bg-primary-subtle border border-primary text-primary me-2" style="width: 12px; height: 12px; padding:0;"> </span>
+                  <small class="fw-bold">Google: <%= loginOAuthCount %></small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="chart-container">
+            <div class="section-header"><i class="fa-solid fa-truck-fast text-info"></i> Post-Dashboard Intent</div>
+            <div class="list-group list-group-flush">
+              <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                <div>
+                  <div class="fw-bold">Active Senders</div>
+                  <small class="text-muted">Completed a parcel submission</small>
+                </div>
+                <span class="badge bg-primary rounded-pill"><%= sentCount %></span>
+              </div>
+              <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                <div>
+                  <div class="fw-bold">Passive Viewers</div>
+                  <small class="text-muted">Browsed dashboard only</small>
+                </div>
+                <span class="badge bg-light text-dark border rounded-pill"><%= notSentCount %></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 mb-5">
+            <div class="chart-container">
+                <div class="section-header"><i class="fa-solid fa-stopwatch text-indigo"></i> Performance Efficiency</div>
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small">Average Time (Send Start → Submit)</span>
+                        <h3 class="fw-bold mb-0 text-indigo"><%= timingData.avgSendFlow %> <span class="fs-6 fw-normal text-muted">seconds</span></h3>
+                    </div>
+                    <div class="text-end">
+                        <i class="fa-solid fa-bolt-lightning text-warning fs-2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+      </div>
+
+    </div>
   </div>
-  <!-- Chart.js -->
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
+    // Set global defaults for Chart.js to match the professional theme
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.color = '#64748b';
+
+    // Funnel Chart
     new Chart(document.getElementById('funnelChart'), {
       type: 'bar',
       data: {
-        labels: ['Visited', 'Login', 'OTP', 'Dashboard'],
+        labels: ['Visited', 'Initiated Login', 'Received OTP', 'Dashboard Access'],
         datasets: [{
-          label: 'Users at Step',
+          label: 'Total Users',
           data: [<%= totalVisits %>, <%= loginCount %>, <%= otpCount %>, <%= dashboardCount %>],
-          backgroundColor: ['#60a5fa', '#34d399', '#fbbf24', '#a78bfa']
+          backgroundColor: ['#e2e8f0', '#94a3b8', '#6366f1', '#4f46e5'],
+          borderRadius: 6,
+          barThickness: 40
         }]
       },
-      options: { scales: { y: { beginAtZero: true } } }
+      options: { 
+        plugins: { legend: { display: false } },
+        scales: { 
+            y: { grid: { display: false }, beginAtZero: true },
+            x: { grid: { display: false } }
+        } 
+      }
     });
 
+    // Login Method Chart
     new Chart(document.getElementById('loginChart'), {
       type: 'doughnut',
       data: {
         labels: ['Phone', 'Google'],
         datasets: [{
-          label: 'Login Methods',
           data: [<%= loginPhoneCount %>, <%= loginOAuthCount %>],
-          backgroundColor: ['#34d399', '#60a5fa']
+          backgroundColor: ['#10b981', '#4f46e5'],
+          borderWidth: 0,
+          cutout: '75%'
         }]
       },
-      options: { plugins: { legend: { position: 'bottom' } } }
+      options: { 
+        plugins: { legend: { display: false } }
+      }
     });
   </script>
 </body>
-
 </html>
