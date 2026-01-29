@@ -1022,23 +1022,84 @@ app.get("/admin/api/partners", async (req, res) => {
 //// CUSTOMER AGENT ONBOARD
 
 const CustomerAgent = require("./models/customerAgent");
-
+const AgentAccessRequest = require("./models/agentAccessRequest.js");
 // Show onboarding form
 app.get("/admin/agents/new", async (req, res) => {
   try {
-    // Fetch all active agents to populate the "Agent Directory" tile
     const agents = await CustomerAgent.find({ isActive: true }).sort({ createdAt: -1 });
-    
-    res.render("agent_new", { 
-      agents: agents, 
-      error: null, 
-      success: null 
+    const requests = await AgentAccessRequest.find({ status: "pending" }).sort({ createdAt: -1 });
+
+    res.render("agent_new", {
+      agents,
+      requests,   // 👈 add this
+      error: null,
+      success: null
     });
   } catch (err) {
-    console.error("Error fetching agents:", err);
+    console.error("Error fetching agents/requests:", err);
     res.status(500).send("Internal Server Error");
   }
 });
+
+app.post("/admin/agent-requests/:id/approve", async (req, res) => {
+  try {
+    const request = await AgentAccessRequest.findById(req.params.id);
+    if (!request || request.status !== "pending") {
+      return res.redirect("/admin/agents/new");
+    }
+
+    // Check if agent already exists
+    const existing = await CustomerAgent.findOne({ email: request.email });
+    if (existing) {
+      request.status = "approved";
+      request.adminNote = "Agent already existed";
+      await request.save();
+      return res.redirect("/admin/agents/new");
+    }
+
+    // Generate Agent ID
+    const count = await CustomerAgent.countDocuments();
+    const agentId = "AGT-" + String(count + 1).padStart(4, "0");
+
+    await CustomerAgent.create({
+      agentId,
+      name: request.name,
+      email: request.email,
+      phone: request.phone,
+      role: "agent",
+      isActive: true,
+    });
+
+    request.status = "approved";
+    request.reviewedAt = new Date();
+    request.reviewedBy = req.user?.email || "admin";
+    await request.save();
+
+    res.redirect("/admin/agents/new");
+  } catch (err) {
+    console.error("Approve request error:", err);
+    res.redirect("/admin/agents/new");
+  }
+});
+
+app.post("/admin/agent-requests/:id/reject", async (req, res) => {
+  try {
+    await AgentAccessRequest.findByIdAndUpdate(req.params.id, {
+      status: "rejected",
+      reviewedAt: new Date(),
+      reviewedBy: req.user?.email || "admin",
+    });
+
+    res.redirect("/admin/agents/new");
+  } catch (err) {
+    console.error("Reject request error:", err);
+    res.redirect("/admin/agents/new");
+  }
+});
+
+
+
+
 
 // Create agent
 app.post("/admin/agents", async (req, res) => {
@@ -1073,8 +1134,13 @@ app.post("/admin/agents", async (req, res) => {
       role: role || "agent",
       isActive: true,
     });
+ const agents = await CustomerAgent.find({ isActive: true }).sort({ createdAt: -1 });
+    const requests = await AgentAccessRequest.find({ status: "pending" }).sort({ createdAt: -1 });
+
 
     res.render("agent_new", {
+       agents,
+      requests, 
       error: null,
       success: `Agent ${agent.name} created successfully with ID ${agent.agentId}`,
     });
