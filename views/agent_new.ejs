@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Onboard Support Agent | Customer Care</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg-body: #f9fafb;
+      --indigo-accent: #4f46e5;
+      --border-color: #e5e7eb;
+    }
+
+    body {
+      background-color: var(--bg-body);
+      font-family: 'Inter', sans-serif;
+      color: #111827;
+    }
+
+    .main-content {
+      margin-left: 260px;
+      padding-top: 80px;
+      padding-bottom: 4rem;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .form-container {
+      width: 100%;
+      max-width: 600px;
+      margin-top: 2rem;
+    }
+
+    .form-card {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      padding: 2.5rem;
+    }
+
+    .page-title {
+      width: 100%;
+      margin-bottom: 2.5rem;
+    }
+
+    .section-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #6b7280;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+    }
+
+    .section-label::after {
+      content: "";
+      flex-grow: 1;
+      height: 1px;
+      background: var(--border-color);
+      margin-left: 12px;
+    }
+
+    .form-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-control, .form-select {
+      border: 1px solid var(--border-color);
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      background-color: #fcfcfd;
+      transition: all 0.2s;
+    }
+
+    .form-control:focus, .form-select:focus {
+      background-color: #fff;
+      border-color: var(--indigo-accent);
+      box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.08);
+      outline: none;
+    }
+
+    .btn-create {
+      background-color: #111827;
+      border: none;
+      padding: 1rem;
+      font-weight: 600;
+      border-radius: 10px;
+      color: white;
+      transition: all 0.2s;
+      width: 100%;
+      margin-top: 1rem;
+    }
+
+    .btn-create:hover {
+      background-color: #1f2937;
+      transform: translateY(-1px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .helper-text {
+      text-align: center;
+      margin-top: 1.5rem;
+      color: #6b7280;
+      font-size: 0.85rem;
+    }
+
+    /* Modal Styling */
+    .modal-content {
+      border-radius: 16px;
+      border: none;
+    }
+    
+    .agent-table-row:hover {
+      background-color: #f8fafc;
+    }
+
+    @media (max-width: 992px) {
+      .main-content { margin-left: 0; padding: 20px; padding-top: 100px; }
+    }
+  </style>
+</head>
+<body>
+
+  <%- include("./imports/adminTopbar") %>
+  <%- include("./imports/adminSidebar") %>
+
+  <div class="main-content">
+    <div class="form-container">
+      
+      <div class="page-title d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="fw-bold h3 mb-1">Customer Care Agent</h2>
+            <p class="text-muted small mb-0">Create an internal profile for support operations.</p>
+        </div>
+        <button class="btn btn-outline-dark btn-sm rounded-pill px-3 fw-medium" data-bs-toggle="modal" data-bs-target="#agentsModal">
+            <i class="fa-solid fa-address-book me-2"></i>View Agents
+        </button>
+      </div>
+
+      <div class="form-card">
+        
+        <% if (error) { %>
+          <div class="alert alert-danger border-0 small mb-4 py-2 px-3">
+            <i class="fa-solid fa-circle-xmark me-2"></i><%= error %>
+          </div>
+        <% } %>
+
+        <% if (success) { %>
+          <div class="alert alert-success border-0 small mb-4 py-2 px-3">
+            <i class="fa-solid fa-circle-check me-2"></i><%= success %>
+          </div>
+        <% } %>
+
+        <form method="POST" action="/admin/agents">
+          
+          <div class="section-label">Agent Profile</div>
+
+          <div class="mb-3">
+            <label class="form-label">Full Name</label>
+            <div class="input-group">
+                <span class="input-group-text bg-transparent border-end-0 text-muted"><i class="fa-regular fa-user"></i></span>
+                <input name="name" class="form-control border-start-0 ps-0" placeholder="e.g. David Smith" required />
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Email</label>
+            <div class="input-group">
+                <span class="input-group-text bg-transparent border-end-0 text-muted"><i class="fa-regular fa-envelope"></i></span>
+                <input name="email" type="email" class="form-control border-start-0 ps-0" placeholder="david.s@droppoint.com" required />
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label">Phone Number</label>
+            <div class="input-group">
+                <span class="input-group-text bg-transparent border-end-0 text-muted"><i class="fa-solid fa-phone-flip"></i></span>
+                <input name="phone" class="form-control border-start-0 ps-0" placeholder="+91 XXXXX XXXXX" />
+            </div>
+          </div>
+
+          <div class="section-label">Administrative Level</div>
+
+          <div class="mb-4">
+            <label class="form-label">Designated Role</label>
+            <select name="role" class="form-select">
+              <option value="agent">Standard Care Agent</option>
+              <option value="supervisor">Operations Supervisor</option>
+              <option value="admin">System Administrator</option>
+            </select>
+          </div>
+
+          <button class="btn btn-create">
+            <i class="fa-solid fa-user-plus me-2"></i> Create Agent Account
+          </button>
+
+          <p class="helper-text">
+            <i class="fa-brands fa-google me-1"></i> Agent will use Google OAuth to log in via provided email.
+          </p>
+
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="agentsModal" tabindex="-1" aria-labelledby="agentsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content shadow-lg">
+        <div class="modal-header border-0 pt-4 px-4">
+          <h5 class="modal-title fw-bold" id="agentsModalLabel">Current Support Team</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body px-4 pb-4">
+          <div class="table-responsive">
+            <table class="table align-middle">
+              <thead>
+                <tr class="text-muted small text-uppercase">
+                  <th class="border-0 pb-3">Agent</th>
+                  <th class="border-0 pb-3">Role</th>
+                  <th class="border-0 pb-3">Contact</th>
+                </tr>
+              </thead>
+              <tbody class="border-top-0">
+                <% if (agents && agents.length > 0) { %>
+                  <% agents.forEach(agent => { %>
+                    <tr class="agent-table-row">
+                      <td class="py-3">
+                        <div class="d-flex align-items-center">
+                          <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                            <i class="fa-solid fa-user-tie text-secondary"></i>
+                          </div>
+                          <div>
+                            <div class="fw-bold text-dark mb-0"><%= agent.name %></div>
+                            <div class="small text-muted" style="font-size: 0.8rem;"><%= agent.email %></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="badge bg-light text-dark border fw-medium px-2 py-1">
+                          <%= agent.role.toUpperCase() %>
+                        </span>
+                      </td>
+                      <td class="small text-muted">
+                        <%= agent.phone || 'N/A' %>
+                      </td>
+                    </tr>
+                  <% }) %>
+                <% } else { %>
+                  <tr>
+                    <td colspan="3" class="text-center py-5 text-muted">
+                      <i class="fa-solid fa-users-slash d-block mb-2 h4"></i>
+                      No active agents found.
+                    </td>
+                  </tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

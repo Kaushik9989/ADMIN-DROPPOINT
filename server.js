@@ -1019,8 +1019,101 @@ app.get("/admin/api/partners", async (req, res) => {
 });
 
 
+//// CUSTOMER AGENT ONBOARD
 
+const CustomerAgent = require("./models/customerAgent");
 
+// Show onboarding form
+app.get("/admin/agents/new", async (req, res) => {
+  try {
+    // Fetch all active agents to populate the "Agent Directory" tile
+    const agents = await CustomerAgent.find({ isActive: true }).sort({ createdAt: -1 });
+    
+    res.render("agent_new", { 
+      agents: agents, 
+      error: null, 
+      success: null 
+    });
+  } catch (err) {
+    console.error("Error fetching agents:", err);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+// Create agent
+app.post("/admin/agents", async (req, res) => {
+  try {
+    const { name, email, phone, role } = req.body;
+
+    if (!name || !email) {
+      return res.render("agent_new", {
+        error: "Name and email are required",
+        success: null,
+      });
+    }
+
+    // Check if already exists
+    const existing = await CustomerAgent.findOne({ email });
+    if (existing) {
+      return res.render("agent_new", {
+        error: "Agent with this email already exists",
+        success: null,
+      });
+    }
+
+    // Generate Agent ID: AGT-0001
+    const count = await CustomerAgent.countDocuments();
+    const agentId = "AGT-" + String(count + 1).padStart(4, "0");
+
+    const agent = await CustomerAgent.create({
+      agentId,
+      name,
+      email,
+      phone,
+      role: role || "agent",
+      isActive: true,
+    });
+
+    res.render("agent_new", {
+      error: null,
+      success: `Agent ${agent.name} created successfully with ID ${agent.agentId}`,
+    });
+  } catch (err) {
+    console.error("Create agent error:", err);
+    res.render("agent_new", {
+      error: "Something went wrong while creating agent",
+      success: null,
+    });
+  }
+});
+
+app.get("/admin/customer/analytics", async (req, res) => {
+    try {
+        const agents = await CustomerAgent.find({ isActive: true });
+
+        // Aggregate Global Stats
+        const globalStats = agents.reduce((acc, agent) => {
+            acc.totalResolved += agent.stats.ticketsResolved;
+            acc.totalSlaBreaches += agent.stats.slaBreaches;
+            acc.totalActive += agent.activeTickets;
+            return acc;
+        }, { totalResolved: 0, totalSlaBreaches: 0, totalActive: 0 });
+
+        // Calculate Average Resolution Time (Global)
+        const totalAgentsWithStats = agents.filter(a => a.stats.ticketsResolved > 0).length;
+        const avgResTime = agents.reduce((sum, a) => sum + a.stats.avgResolutionTimeSeconds, 0) / (agents.length || 1);
+
+        res.render("customercare_analytics", {
+            agents,
+            globalStats,
+            avgResTime: Math.round(avgResTime / 60), // Convert to minutes
+            error: null
+        });
+    } catch (err) {
+        console.error("Analytics Error:", err);
+        res.status(500).send("Internal Server Error");
+    }
+});
 
 
 

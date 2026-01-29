@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Service Analytics | Droppoint Admin</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root { 
+            --bg-body: #f8fafc; 
+            --indigo-accent: #4f46e5;
+            --border-color: #e2e8f0;
+        }
+        
+        body { 
+            background: var(--bg-body); 
+            font-family: 'Inter', sans-serif; 
+            color: #1e293b;
+        }
+
+        .main-content { 
+            margin-left: 260px; /* Aligns with your sidebar */
+            padding: 90px 40px 40px 40px; 
+        }
+
+        /* Metrics Summary Section */
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover { 
+            transform: translateY(-4px); 
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .icon-box {
+            width: 42px; height: 42px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            margin-bottom: 0.25rem;
+        }
+
+        /* Leaderboard Table Section */
+        .table-container {
+            background: white; 
+            border-radius: 16px; 
+            border: 1px solid var(--border-color); 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .table thead th {
+            background-color: #f8fafc;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 700;
+            color: #64748b;
+            padding: 1.25rem 1rem;
+            border-bottom: 2px solid #f1f5f9;
+        }
+
+        .table tbody td {
+            padding: 1.25rem 1rem;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        /* Workload Bar */
+        .workload-track {
+            height: 6px;
+            background: #f1f5f9;
+            border-radius: 10px;
+            overflow: hidden;
+            width: 80px;
+        }
+
+        .agent-avatar {
+            width: 36px; height: 36px;
+            background: #eef2ff;
+            color: var(--indigo-accent);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.8rem;
+        }
+
+        .badge-status {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 6px;
+        }
+
+        @media (max-width: 992px) { .main-content { margin-left: 0; padding-top: 110px; } }
+    </style>
+</head>
+<body>
+
+    <%- include("./imports/adminTopbar") %>
+    <%- include("./imports/adminSidebar") %>
+
+    <div class="main-content">
+        <div class="d-flex justify-content-between align-items-end mb-4">
+            <div>
+                <h2 class="fw-bold mb-1">Service Analytics</h2>
+                <p class="text-muted small mb-0">Monitor global ticket resolution and agent efficiency metrics.</p>
+            </div>
+            <!-- <button class="btn btn-white border shadow-sm btn-sm px-3 rounded-pill" onclick="window.print()">
+                <i class="fa-solid fa-file-export me-2 text-muted"></i>Export PDF
+            </button> -->
+        </div>
+
+        <div class="row g-4 mb-5">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="icon-box bg-indigo text-white" style="background-color: var(--indigo-accent) !important;"><i class="fa-solid fa-check-double"></i></div>
+                    <div class="metric-label">Resolved (All Time)</div>
+                    <h3 class="fw-bold mb-0"><%= globalStats.totalResolved %></h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="icon-box bg-success-subtle text-success"><i class="fa-solid fa-bolt-lightning"></i></div>
+                    <div class="metric-label">Avg. Resolution</div>
+                    <h3 class="fw-bold mb-0"><%= avgResTime %><small class="fs-6 fw-normal ms-1">mins</small></h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="icon-box bg-warning-subtle text-warning"><i class="fa-solid fa-layer-group"></i></div>
+                    <div class="metric-label">Live Tickets</div>
+                    <h3 class="fw-bold mb-0"><%= globalStats.totalActive %></h3>
+                </div>
+            </div>
+            
+        </div>
+
+        <div class="table-container">
+            <div class="px-4 py-3 border-bottom d-flex justify-content-between align-items-center bg-white">
+                <h6 class="mb-0 fw-bold">Agent Productivity Leaderboard</h6>
+                <div class="small text-muted"><i class="fa-solid fa-circle text-success me-1 small"></i>Live Data Sync</div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Support Agent</th>
+                            <th>Efficiency</th>
+                            <th>Workload Depth</th>
+                            <th>Resolved Count</th>
+                            <th class="text-end">Compliance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% agents.forEach(agent => { %>
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="agent-avatar me-3">
+                                            <%= agent.name.split(' ').map(n => n[0]).join('') %>
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold small text-dark"><%= agent.name %></div>
+                                            <div class="text-muted" style="font-size: 0.7rem;"><%= agent.agentId %></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="fw-bold small text-dark"><%= Math.round(agent.stats.avgResolutionTimeSeconds / 60) %>m</div>
+                                    <div class="text-muted" style="font-size: 0.7rem;">Per Ticket</div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <% let load = (agent.activeTickets / agent.maxConcurrentTickets) * 100 %>
+                                        <div class="workload-track me-2">
+                                            <div class="h-100 <%= load > 80 ? 'bg-danger' : 'bg-primary' %>" 
+                                                 style="width: <%= load %>%; background-color: <%= load > 80 ? '#ef4444' : 'var(--indigo-accent)' %> !important;"></div>
+                                        </div>
+                                        <span class="small fw-bold text-dark"><%= agent.activeTickets %></span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="small fw-bold text-dark"><%= agent.stats.ticketsResolved %></div>
+                                    <div class="text-muted" style="font-size: 0.7rem;">Claimed: <%= agent.stats.ticketsClaimed %></div>
+                                </td>
+                                <td class="text-end">
+                                    <% if(agent.stats.slaBreaches > 0) { %>
+                                        <span class="badge-status bg-danger-subtle text-danger">
+                                            <%= agent.stats.slaBreaches %> Breaches
+                                        </span>
+                                    <% } else { %>
+                                        <span class="badge-status bg-success-subtle text-success">
+                                            100% Comply
+                                        </span>
+                                    <% } %>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
